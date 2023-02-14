@@ -10,7 +10,6 @@ members = [
 [workspace.dependencies]
 agent-lib = { path = "../../crates/agent-lib" }
 
-
 # TODO: refer to git hashes, as this is essentially driving testing of those crates.
 casper-types = { path = "../../../casper-node/types" }
 casper-node = { path = "../../../casper-node/node" }
@@ -23,9 +22,17 @@ duct = "0.13"
 futures = "0.3"
 libc = "0.2"
 rocksdb = "0.20.1"
+reqwest = "0.11"
+warp = "0.3"
 structopt = "0.3.26"
 tarpc = { version = "0.31.0", features = ["full"]}
 thiserror = "1"
 tokio = { version = "1", features = ["macros", "net", "rt-multi-thread"] }
+tokio-rustls = { version = "0.23" }
+tokio-util = { version = "0.7" }
 serde = { version = "1", features = ["derive"]}
 sudo = "0.6"
+rustls = "0.20"
+rustls-native-certs = "0.6"
+rustls-pemfile = "1"
+pin-project = "1"

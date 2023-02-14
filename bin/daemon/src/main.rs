@@ -16,6 +16,7 @@ use tarpc::{
 async fn main() -> anyhow::Result<()> {
     sudo::escalate_if_needed().unwrap();
     println!("Successfully escalated privileges...");
+
     let server_addr = (IpAddr::V6(Ipv6Addr::LOCALHOST), 8081);
     let mut listener = tarpc::serde_transport::tcp::listen(&server_addr, Bincode::default).await?;
     listener
@@ -59,7 +60,6 @@ impl AgentService for Agent {
         _: tarpc::context::Context,
         request: StartNodeRequest,
     ) -> StartNodeResponse {
-        
         StartNodeResponse::Error
     }
 
