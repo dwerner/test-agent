@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "bin/cli",
+    "bin/daemon",
+    "crates/agent-lib"
+]
