@@ -1,14 +1,22 @@
 [package]
-name = "perf-agent-daemon"
+name = "daemon"
 version = "0.1.0"
 edition = "2021"
 
+# [features]
+# aws = ["aws-config"]
+
 [dependencies]
-apt-cmd = "0.3"
-async-process = "1.5.0"
-anyhow = "1"
 agent-lib = { path = "../../crates/agent-lib" }
-structopt = "0.3.26"
-tarpc = { version = "0.30", features = ["full"] }
-tokio = { version = "1", features = ["macros", "net", "rt-multi-thread"] }
-futures = "0.3"
+
+libc = { workspace = true }
+
+apt-cmd = { workspace = true }
+async-process = { workspace = true }
+anyhow ={ workspace = true } 
+structopt = { workspace = true }
+sudo = { workspace = true }
+tarpc = { workspace = true }
+tokio = { workspace = true }
+thiserror = { workspace = true }
+futures = { workspace = true }

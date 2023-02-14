@@ -1,6 +1,31 @@
 [workspace]
 members = [
-    "bin/cli",
+    "bin/client",
     "bin/daemon",
-    "crates/agent-lib"
+    "bin/asset-generator",
+    "crates/agent-lib",
+    "xtask",
 ]
+
+[workspace.dependencies]
+agent-lib = { path = "../../crates/agent-lib" }
+
+
+# TODO: refer to git hashes, as this is essentially driving testing of those crates.
+casper-types = { path = "../../../casper-node/types" }
+casper-node = { path = "../../../casper-node/node" }
+casper-client = { path = "../../../casper-client-rs" }
+
+anyhow = "1"
+apt-cmd = "0.3"
+async-process = "1.5.0"
+duct = "0.13"
+futures = "0.3"
+libc = "0.2"
+rocksdb = "0.20.1"
+structopt = "0.3.26"
+tarpc = { version = "0.31.0", features = ["full"]}
+thiserror = "1"
+tokio = { version = "1", features = ["macros", "net", "rt-multi-thread"] }
+serde = { version = "1", features = ["derive"]}
+sudo = "0.6"

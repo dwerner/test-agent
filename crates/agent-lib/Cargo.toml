@@ -4,9 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-serde = "1"
 # casper-types = { path = "../../../casper-node/types" }
 # casper-node = { path = "../../../casper-node/node" }
 # casper-client = { path = "../../../casper-client-rs" }
 
-tarpc = { version = "0.30.0", features = ["full"]}
+duct = { workspace = true }
+serde = { workspace = true }
+tarpc = { workspace = true }
+libc = { workspace = true }
+structopt = { workspace = true }
