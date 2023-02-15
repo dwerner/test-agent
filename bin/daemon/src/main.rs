@@ -15,11 +15,11 @@ use tarpc::{
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    sudo::escalate_if_needed().unwrap();
+    // sudo::escalate_if_needed().unwrap();
 
-    println!("Successfully escalated privileges...");
+    // println!("Successfully escalated privileges...");
 
-    let mut listener = tls::serve(
+    let listener = tls::serve(
         "0.0.0.0 TODO ME",
         8081,
         "assets/cert.pem",
@@ -29,20 +29,29 @@ async fn main() -> anyhow::Result<()> {
     .await?;
 
     listener
-        .config_mut()
-        .max_frame_length(std::u32::MAX as usize);
-
-    listener
-        .filter_map(|r| future::ready(r.ok()))
+        .filter_map(|r| {
+            let transport = match r {
+                Ok(transport) => transport,
+                Err(err) => {
+                    println!("error with transport : {:?}", err);
+                    return future::ready(None);
+                }
+            };
+            println!("got a transport");
+            future::ready(Some(transport))
+        })
         .map(server::BaseChannel::with_defaults)
         //.max_channels_per_key(1, |t| t.transport().peer_addr().unwrap().ip())
         .map(|channel| {
+            println!("creating a channel");
             let server = Agent::new(channel.transport().peer_addr().unwrap())
                 .expect("unable to create agent");
             channel.execute(server.serve())
         })
         .buffer_unordered(10)
-        .for_each(|_| async {})
+        .for_each(|_| async {
+            println!("did something ....");
+        })
         .await;
 
     Ok(())

@@ -3,6 +3,7 @@ use std::fs::File;
 use std::io::{BufReader, Read};
 use std::net::{IpAddr, Ipv6Addr};
 use std::sync::Arc;
+use std::task::Waker;
 use std::{
     io,
     pin::Pin,
@@ -20,7 +21,7 @@ use tarpc::serde_transport::Transport as TarpcTransport;
 use tarpc::tokio_serde::{Deserializer, Serializer};
 use tokio::net::{TcpListener, TcpStream};
 use tokio_rustls::server::TlsStream;
-use tokio_rustls::{client, TlsAcceptor, TlsConnector};
+use tokio_rustls::{client, Accept, TlsAcceptor, TlsConnector};
 use tokio_serde::Framed as SerdeFramed;
 use tokio_util::codec::length_delimited;
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
@@ -125,11 +126,14 @@ where
     Codec: Serializer<SinkItem> + Deserializer<Item>,
     CodecFn: Fn() -> Codec,
 {
+    println!("listen");
     let acceptor = TlsAcceptor::from(Arc::new(config));
     let listener = TcpListener::bind(addr).await?;
     let local_addr = listener.local_addr()?;
     Ok(TlsIncoming {
         acceptor,
+        accept: None,
+        waker: None,
         listener,
         codec_fn,
         local_addr,
@@ -142,6 +146,10 @@ where
 #[pin_project]
 pub struct TlsIncoming<Item, SinkItem, Codec, CodecFn> {
     acceptor: TlsAcceptor,
+    #[pin]
+    accept: Option<Accept<TcpStream>>,
+    #[pin]
+    waker: Option<Waker>,
     listener: TcpListener,
     local_addr: SocketAddr,
     codec_fn: CodecFn,
@@ -176,15 +184,33 @@ where
     type Item = io::Result<Transport<Item, SinkItem, Codec>>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
-        let conn: TcpStream =
-            ready!(Pin::new(&mut self.as_mut().project().listener).poll_accept(cx)?).0;
-
-        let tls: TlsStream<TcpStream> = ready!(Pin::new(&mut self.acceptor.accept(conn)).poll(cx)?);
-
-        Poll::Ready(Some(Ok(new(
-            self.config.new_framed(tls),
-            (self.codec_fn)(),
-        ))))
+        match self.accept.as_mut() {
+            None => {
+                let conn: TcpStream =
+                    ready!(Pin::new(&mut self.as_mut().project().listener).poll_accept(cx)?).0;
+                self.accept = Some(self.acceptor.accept(conn));
+                let waker = cx.waker().clone();
+                waker.wake_by_ref();
+                self.waker = Some(waker);
+                return Poll::Pending;
+            }
+            Some(mut accept) => match Pin::new(&mut accept).poll(cx) {
+                Poll::Ready(tls) => {
+                    self.waker.take();
+                    self.accept.take();
+                    match tls {
+                        Ok(tls) => {
+                            return Poll::Ready(Some(Ok(new(
+                                self.config.new_framed(tls),
+                                (self.codec_fn)(),
+                            ))))
+                        }
+                        Err(err) => return Poll::Ready(Some(Err(err))),
+                    }
+                }
+                Poll::Pending => return Poll::Pending,
+            },
+        }
     }
 }
 
@@ -200,16 +226,18 @@ where
     Codec: Serializer<SinkItem> + Deserializer<I>,
     CodecFn: Fn() -> Codec,
 {
-    let mut roots = rustls::RootCertStore::empty();
-    for cert in rustls_native_certs::load_native_certs().expect("could not load os certificates") {
-        roots.add(&rustls::Certificate(cert.0)).unwrap();
-    }
+    // let mut roots = rustls::RootCertStore::empty();
+    // for cert in rustls_native_certs::load_native_certs().expect("could not load os certificates") {
+    //     roots.add(&rustls::Certificate(cert.0)).unwrap();
+    // }
+
+    println!("beginning serve");
 
     let key = load_key(key_file)?;
     let cert = load_cert(cert_file)?;
     let config = rustls::ServerConfig::builder()
         .with_safe_defaults()
-        .with_no_client_auth()
+        .with_no_client_auth() // TODO - verify client certificate
         .with_single_cert(vec![cert], key)?;
 
     let server_addr = (IpAddr::V6(Ipv6Addr::LOCALHOST), 8081);
