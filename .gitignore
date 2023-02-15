@@ -1,4 +1,4 @@
 /target
 
-**/cert.pem
-**/key.pem
+**/*.pem
+**/*.pem

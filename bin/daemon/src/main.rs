@@ -22,8 +22,8 @@ async fn main() -> anyhow::Result<()> {
     let listener = tls::serve(
         "0.0.0.0 TODO ME",
         8081,
-        "assets/cert.pem",
-        "assets/key.pem",
+        "assets/localhost-cert.pem",
+        "assets/localhost-key.pem",
         Bincode::default,
     )
     .await?;

@@ -142,13 +142,13 @@ fn generate_cert_and_key_files(hostname: &str) -> Result<(), std::io::Error> {
         "rsa:4096",
         "-nodes",
         "-keyout",
-        "assets/key.pem",
+        format!("assets/{hostname}-key.pem"),
         "-out",
-        "assets/cert.pem",
+        format!("assets/{hostname}-cert.pem"),
         "-subj",
         format!("/C=CA/ST=BC/L=Vancouver/O=Dis/CN={hostname}"),
     )
     .run()?;
-    println!("generated a new cert and key");
+    println!("generated a new cert for hostname {hostname}");
     Ok(())
 }

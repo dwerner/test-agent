@@ -261,7 +261,11 @@ pub async fn connect(
     let config = rustls::ClientConfig::builder()
         .with_safe_defaults()
         .with_root_certificates(roots)
+        .with_client_cert_resolver(NoCert)
         .with_no_client_auth();
+
+
+
     let connector = TlsConnector::from(Arc::new(config));
     let servername = rustls::ServerName::try_from(domain).unwrap();
     let _host = format!("{}:{}", domain, port);
@@ -287,4 +291,18 @@ fn load_cert(cert_file: &str) -> Result<rustls::Certificate, anyhow::Error> {
         return Err(anyhow::format_err!("no valid cert found in {cert_file}"));
     }
     Ok(rustls::Certificate(certs[0].clone()))
+}
+
+struct NoCertResolver {}
+
+impl rustls:: for NoCertVerifier {
+    fn verify_server_cert(
+        &self,
+        _: &rustls::RootCertStore,
+        _: &[rustls::Certificate],
+        _: webpki::DNSNameRef<'_>,
+        _: &[u8],
+    ) -> Result<rustls::ServerCertVerified, rustls::TLSError> {
+        Ok(rustls::ServerCertVerified::assertion())
+    }
 }
