@@ -23,6 +23,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "duct",
+ "futures",
  "libc",
  "pin-project",
  "rustls",
@@ -32,6 +33,7 @@ dependencies = [
  "tarpc",
  "tokio",
  "tokio-rustls",
+ "tokio-util",
 ]
 
 [[package]]

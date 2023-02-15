@@ -5,7 +5,7 @@ use std::{
 
 use agent_lib::{
     pkg_manager, AgentService, InstallPackageRequest, InstallPackageResponse, StartNodeRequest,
-    StartNodeResponse,
+    StartNodeResponse, tls, serve_tls,
 };
 use futures::{future, StreamExt};
 use tarpc::{
@@ -18,7 +18,7 @@ async fn main() -> anyhow::Result<()> {
     println!("Successfully escalated privileges...");
 
     let server_addr = (IpAddr::V6(Ipv6Addr::LOCALHOST), 8081);
-    let mut listener = tarpc::serde_transport::tcp::listen(&server_addr, Bincode::default).await?;
+    let mut listener = serve_tls("0.0.0.0 TODO ME", 8081, "ca.cert", "pk.pem").await?;
     listener
         .config_mut()
         .max_frame_length(std::u32::MAX as usize);

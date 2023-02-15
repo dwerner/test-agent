@@ -21,4 +21,6 @@ rustls-native-certs = { workspace = true }
 structopt = { workspace = true }
 tokio = { workspace = true }
 tokio-rustls = { workspace = true }
+tokio-util = { workspace = true }
 
+futures = {workspace =true}
