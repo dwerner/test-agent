@@ -28,11 +28,13 @@ dependencies = [
  "pin-project",
  "rustls",
  "rustls-native-certs",
+ "rustls-pemfile",
  "serde",
  "structopt",
  "tarpc",
  "tokio",
  "tokio-rustls",
+ "tokio-serde",
  "tokio-util",
 ]
 
@@ -97,6 +99,7 @@ checksum = "3702cac3c1601410cd655ae41650c4c87f7c3183dca6d1cd9acc4220ed56a8b7"
 name = "asset-generator"
 version = "0.1.0"
 dependencies = [
+ "rustls",
  "structopt",
 ]
 
@@ -411,6 +414,7 @@ dependencies = [
  "agent-lib",
  "anyhow",
  "futures",
+ "rustls",
  "structopt",
  "tarpc",
  "tokio",
@@ -567,6 +571,7 @@ dependencies = [
  "async-process",
  "futures",
  "libc",
+ "rustls-pemfile",
  "structopt",
  "sudo",
  "tarpc",

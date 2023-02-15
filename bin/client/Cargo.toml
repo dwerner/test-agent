@@ -11,3 +11,4 @@ structopt = { workspace = true }
 tarpc = { workspace = true }
 tokio = { workspace = true }
 futures = { workspace = true }
+rustls = { workspace = true }

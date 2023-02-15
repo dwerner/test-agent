@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 structopt = { workspace = true }
+rustls = { workspace = true }

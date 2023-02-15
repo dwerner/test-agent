@@ -1,6 +1,6 @@
 use std::net::{IpAddr, Ipv6Addr};
 
-use agent_lib::{AgentServiceClient, InstallPackageRequest, StartNodeRequest};
+use agent_lib::{tls, AgentServiceClient, InstallPackageRequest, StartNodeRequest};
 use structopt::StructOpt;
 use tarpc::{client, context, tokio_serde::formats::Bincode};
 
@@ -17,9 +17,11 @@ enum AgentRequest {}
 async fn main() -> anyhow::Result<()> {
     let opts: Args = structopt::StructOpt::from_args();
     println!("opts {:?}", opts);
-    let server_addr = (IpAddr::V6(Ipv6Addr::LOCALHOST), 8081);
-    let transport = tarpc::serde_transport::tcp::connect(&server_addr, Bincode::default);
-    let client = AgentServiceClient::new(client::Config::default(), transport.await?).spawn();
+    let tls = tls::connect("127.0.0.1", 8081, "assets/cert.pem")
+        .await
+        .unwrap();
+    let transport = tarpc::serde_transport::Transport::from((tls, Bincode::default()));
+    let client = AgentServiceClient::new(client::Config::default(), transport).spawn();
 
     match opts {
         Args::Start(start) => {

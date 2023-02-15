@@ -30,6 +30,7 @@ thiserror = "1"
 tokio = { version = "1", features = ["macros", "net", "rt-multi-thread"] }
 tokio-rustls = { version = "0.23" }
 tokio-util = { version = "0.7" }
+tokio-serde = { version = "0.8"}
 serde = { version = "1", features = ["derive"]}
 sudo = "0.6"
 rustls = "0.20"

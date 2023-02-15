@@ -4,21 +4,30 @@ use std::{
 };
 
 use agent_lib::{
-    pkg_manager, AgentService, InstallPackageRequest, InstallPackageResponse, StartNodeRequest,
-    StartNodeResponse, tls, serve_tls,
+    pkg_manager, tls, AgentService, InstallPackageRequest, InstallPackageResponse,
+    StartNodeRequest, StartNodeResponse,
 };
 use futures::{future, StreamExt};
 use tarpc::{
-    server::{self, incoming::Incoming, Channel},
+    server::{self, Channel},
     tokio_serde::formats::Bincode,
 };
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     sudo::escalate_if_needed().unwrap();
+
     println!("Successfully escalated privileges...");
 
-    let server_addr = (IpAddr::V6(Ipv6Addr::LOCALHOST), 8081);
-    let mut listener = serve_tls("0.0.0.0 TODO ME", 8081, "ca.cert", "pk.pem").await?;
+    let mut listener = tls::serve(
+        "0.0.0.0 TODO ME",
+        8081,
+        "assets/cert.pem",
+        "assets/key.pem",
+        Bincode::default,
+    )
+    .await?;
+
     listener
         .config_mut()
         .max_frame_length(std::u32::MAX as usize);
@@ -26,7 +35,7 @@ async fn main() -> anyhow::Result<()> {
     listener
         .filter_map(|r| future::ready(r.ok()))
         .map(server::BaseChannel::with_defaults)
-        .max_channels_per_key(1, |t| t.transport().peer_addr().unwrap().ip())
+        //.max_channels_per_key(1, |t| t.transport().peer_addr().unwrap().ip())
         .map(|channel| {
             let server = Agent::new(channel.transport().peer_addr().unwrap())
                 .expect("unable to create agent");

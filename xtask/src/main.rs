@@ -1,5 +1,10 @@
 use std::{
-    ffi::OsString, io::BufRead, net::TcpListener, path::PathBuf, thread::JoinHandle, time::Duration,
+    ffi::OsString,
+    io::{BufRead, BufReader},
+    net::TcpListener,
+    path::PathBuf,
+    thread::JoinHandle,
+    time::Duration,
 };
 
 use duct::cmd;
@@ -11,6 +16,7 @@ enum Command {
     BuildAll,
     RunServerAndClient,
     RunServer,
+    GenerateSelfSignedCert,
 }
 
 impl Command {
@@ -24,6 +30,7 @@ impl Command {
             }
             Command::RunServer => cargo_run_server(),
             Command::RunServerAndClient => cargo_run_server_and_client(),
+            Command::GenerateSelfSignedCert => generate_cert_and_key_files(),
         }
     }
 }
@@ -130,4 +137,24 @@ fn cargo_run_and_read(
         }
         Ok(())
     }))
+}
+
+fn generate_cert_and_key_files() -> Result<(), std::io::Error> {
+    cmd!(
+        "openssl",
+        "req",
+        "-x509",
+        "-newkey",
+        "rsa:4096",
+        "-nodes",
+        "-keyout",
+        "assets/key.pem",
+        "-out",
+        "assets/cert.pem",
+        "-subj",
+        "/C=CA/ST=BC/L=Vancouver/O=Dis/CN=www.example.com",
+    )
+    .run()?;
+    println!("generated a new cert and key");
+    Ok(())
 }

@@ -10,13 +10,14 @@ use std::net::{IpAddr, Ipv6Addr};
 use std::sync::Arc;
 
 use structopt::StructOpt;
-use tarpc::ClientMessage;
+use tarpc::tokio_serde::{Deserializer, Serializer};
 use tarpc::{
     serde::{Deserialize, Serialize},
     tokio_serde::formats::Bincode,
 };
-use tokio::net::{ TcpStream};
-use tokio_rustls::{ TlsConnector, client};
+use tarpc::{ClientMessage, Response};
+use tokio::net::TcpStream;
+use tokio_rustls::{client, TlsConnector};
 
 #[derive(Debug, Serialize, Deserialize, StructOpt)]
 pub struct InstallPackageRequest {
@@ -68,69 +69,4 @@ pub enum StartNodeResponse {
 pub trait AgentService {
     async fn install_package(request: InstallPackageRequest) -> InstallPackageResponse;
     async fn start_node(request: StartNodeRequest) -> StartNodeResponse;
-}
-
-pub async fn connect_tls(domain: &str, port: u16) -> Result<client::TlsStream<TcpStream>, std::io::Error> {
-    let mut roots = rustls::RootCertStore::empty();
-    for cert in rustls_native_certs::load_native_certs().expect("could not load os certificates") {
-        roots.add(&rustls::Certificate(cert.0)).unwrap();
-    }
-    let config = rustls::ClientConfig::builder()
-        .with_safe_defaults()
-        .with_root_certificates(roots)
-        .with_no_client_auth();
-    let connector = TlsConnector::from(Arc::new(config));
-    let servername = rustls::ServerName::try_from(domain).unwrap();
-
-    let host = format!("{}:{}", domain, port);
-    let stream = TcpStream::connect(host).await?;
-    connector.connect(servername, stream).await
-}
-
-pub type TlsIncoming = tls::Incoming<ClientMessage<AgentServiceRequest>, ClientMessage<AgentServiceResponse>, Bincode<ClientMessage<AgentServiceRequest>, ClientMessage<AgentServiceResponse>>, fn() -> Bincode<ClientMessage<AgentServiceRequest>, ClientMessage<AgentServiceResponse>>>;
-
-pub async fn serve_tls(
-    domain: &str,
-    port: u16,
-    cert_file: &str,
-    key_file: &str,
-) -> Result<TlsIncoming, anyhow::Error> {
-    let mut roots = rustls::RootCertStore::empty();
-    for cert in rustls_native_certs::load_native_certs().expect("could not load os certificates") {
-        roots.add(&rustls::Certificate(cert.0)).unwrap();
-    }
-
-    let cert = {
-        let mut cert_data = vec![];
-        let mut cert_file = File::open(cert_file)?;
-        cert_file.read_to_end(&mut cert_data)?;
-        rustls::Certificate(cert_data)
-    };
-    let key = {
-        let mut key_data = vec![];
-        let mut key_file = File::open(key_file)?;
-        key_file.read_to_end(&mut key_data)?;
-        rustls::PrivateKey(key_data)
-    };
-    // TODO: add self-signed cert
-    let config = rustls::ServerConfig::builder()
-        .with_safe_defaults()
-        //.with_ca_certificates(roots)
-        .with_no_client_auth()
-        .with_single_cert(vec![cert], key)?;
-
-    let server_addr = (IpAddr::V6(Ipv6Addr::LOCALHOST), 8081);
-    let mut listener = tls::listen::<
-        ClientMessage<AgentServiceRequest>,
-        ClientMessage<AgentServiceResponse>,
-        Bincode<_, _>,
-        fn() -> Bincode<_, _>,
-    >(&server_addr, config, tarpc::tokio_serde::formats::Bincode::default)
-    .await?;
-
-    listener
-        .config_mut()
-        .max_frame_length(std::u32::MAX as usize);
-
-    Ok(listener)
 }

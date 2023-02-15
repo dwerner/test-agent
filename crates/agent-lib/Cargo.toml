@@ -22,5 +22,7 @@ structopt = { workspace = true }
 tokio = { workspace = true }
 tokio-rustls = { workspace = true }
 tokio-util = { workspace = true }
+tokio-serde = { workspace = true }
+rustls-pemfile = { workspace = true }
 
 futures = {workspace =true}
