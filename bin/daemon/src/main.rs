@@ -1,7 +1,4 @@
-use std::{
-    io::BufRead,
-    net::{ SocketAddr},
-};
+use std::{io::BufRead, net::SocketAddr};
 
 use agent_lib::{
     pkg_manager, tls, AgentService, InstallPackageRequest, InstallPackageResponse,
@@ -78,6 +75,9 @@ impl AgentService for Agent {
         _: tarpc::context::Context,
         _request: StartNodeRequest,
     ) -> StartNodeResponse {
+        for i in 0..10 {
+            println!("did some work {i}");
+        }
         StartNodeResponse::Error
     }
 

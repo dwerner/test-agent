@@ -1,6 +1,6 @@
 use std::error::Error;
 use std::fs::File;
-use std::io::{BufReader};
+use std::io::BufReader;
 use std::net::{IpAddr, Ipv6Addr};
 use std::sync::Arc;
 use std::task::Waker;
@@ -14,6 +14,7 @@ use std::{marker::PhantomData, net::SocketAddr};
 use futures::{ready, Sink};
 use futures::{Future, Stream};
 use pin_project::pin_project;
+use rustls::client::ServerCertVerifier;
 use rustls::ServerConfig;
 use rustls_pemfile::Item;
 use serde::{Deserialize, Serialize};
@@ -257,14 +258,18 @@ pub async fn connect(
     cert_file: &str,
 ) -> Result<client::TlsStream<TcpStream>, anyhow::Error> {
     let mut roots = rustls::RootCertStore::empty();
+
+    // only valid for self signed certs, which is what we have.
+    let end_entity = load_cert(cert_file)?;
     roots.add(&load_cert(cert_file)?)?;
-    let config = rustls::ClientConfig::builder()
+    let mut config = rustls::ClientConfig::builder()
         .with_safe_defaults()
         .with_root_certificates(roots)
-        .with_client_cert_resolver(NoCert)
         .with_no_client_auth();
 
-
+    config.dangerous().set_certificate_verifier(
+        Arc::new(SelfSignedCertResolver { end_entity }) as Arc<dyn ServerCertVerifier>
+    );
 
     let connector = TlsConnector::from(Arc::new(config));
     let servername = rustls::ServerName::try_from(domain).unwrap();
@@ -293,16 +298,26 @@ fn load_cert(cert_file: &str) -> Result<rustls::Certificate, anyhow::Error> {
     Ok(rustls::Certificate(certs[0].clone()))
 }
 
-struct NoCertResolver {}
+struct SelfSignedCertResolver {
+    end_entity: rustls::Certificate,
+}
 
-impl rustls:: for NoCertVerifier {
+impl ServerCertVerifier for SelfSignedCertResolver {
     fn verify_server_cert(
         &self,
-        _: &rustls::RootCertStore,
-        _: &[rustls::Certificate],
-        _: webpki::DNSNameRef<'_>,
-        _: &[u8],
-    ) -> Result<rustls::ServerCertVerified, rustls::TLSError> {
-        Ok(rustls::ServerCertVerified::assertion())
+        end_entity: &rustls::Certificate,
+        _intermediates: &[rustls::Certificate],
+        _server_name: &rustls::ServerName,
+        _scts: &mut dyn Iterator<Item = &[u8]>,
+        _ocsp_response: &[u8],
+        _now: std::time::SystemTime,
+    ) -> Result<rustls::client::ServerCertVerified, rustls::Error> {
+        if *end_entity == self.end_entity {
+            println!("accepting self-signed cert");
+            return Ok(rustls::client::ServerCertVerified::assertion());
+        }
+        return Err(rustls::Error::General(
+            "we accept only matching self-signed certs".into(),
+        ));
     }
 }

@@ -1,4 +1,3 @@
-
 use agent_lib::{tls, AgentServiceClient, InstallPackageRequest, StartNodeRequest};
 use structopt::StructOpt;
 use tarpc::{client, context, tokio_serde::formats::Bincode};
@@ -21,12 +20,6 @@ async fn main() -> anyhow::Result<()> {
         .unwrap();
     let transport = tarpc::serde_transport::Transport::from((tls, Bincode::default()));
     let client = AgentServiceClient::new(client::Config::default(), transport).spawn();
-
-    // let response = client
-    //     .start_node(context::current(), StartNodeRequest { wrapper: None })
-    //     .await?;
-
-    // println!("response {:?}", response);
 
     match opts {
         Args::Start(start) => {
