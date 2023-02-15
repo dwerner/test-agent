@@ -4,20 +4,11 @@
 pub mod pkg_manager;
 pub mod tls;
 
-use std::fs::File;
-use std::io::Read;
-use std::net::{IpAddr, Ipv6Addr};
-use std::sync::Arc;
 
 use structopt::StructOpt;
-use tarpc::tokio_serde::{Deserializer, Serializer};
 use tarpc::{
     serde::{Deserialize, Serialize},
-    tokio_serde::formats::Bincode,
 };
-use tarpc::{ClientMessage, Response};
-use tokio::net::TcpStream;
-use tokio_rustls::{client, TlsConnector};
 
 #[derive(Debug, Serialize, Deserialize, StructOpt)]
 pub struct InstallPackageRequest {

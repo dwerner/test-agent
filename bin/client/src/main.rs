@@ -1,4 +1,3 @@
-use std::net::{IpAddr, Ipv6Addr};
 
 use agent_lib::{tls, AgentServiceClient, InstallPackageRequest, StartNodeRequest};
 use structopt::StructOpt;

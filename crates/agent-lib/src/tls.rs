@@ -1,6 +1,6 @@
 use std::error::Error;
 use std::fs::File;
-use std::io::{BufReader, Read};
+use std::io::{BufReader};
 use std::net::{IpAddr, Ipv6Addr};
 use std::sync::Arc;
 use std::task::Waker;
@@ -215,8 +215,8 @@ where
 }
 
 pub async fn serve<I, SinkItem, Codec, CodecFn>(
-    domain: &str,
-    port: u16,
+    _domain: &str,
+    _port: u16,
     cert_file: &str,
     key_file: &str,
     codec_fn: CodecFn,
@@ -264,7 +264,7 @@ pub async fn connect(
         .with_no_client_auth();
     let connector = TlsConnector::from(Arc::new(config));
     let servername = rustls::ServerName::try_from(domain).unwrap();
-    let host = format!("{}:{}", domain, port);
+    let _host = format!("{}:{}", domain, port);
     let server_addr = (IpAddr::V6(Ipv6Addr::LOCALHOST), 8081);
     let stream = TcpStream::connect(server_addr).await?;
     Ok(connector.connect(servername, stream).await?)

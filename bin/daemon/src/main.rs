@@ -1,6 +1,6 @@
 use std::{
     io::BufRead,
-    net::{IpAddr, Ipv6Addr, SocketAddr},
+    net::{ SocketAddr},
 };
 
 use agent_lib::{
@@ -62,12 +62,12 @@ pub enum AgentError {}
 
 #[derive(Clone)]
 struct Agent {
-    addr: SocketAddr,
+    _addr: SocketAddr,
 }
 
 impl Agent {
     fn new(addr: SocketAddr) -> Result<Self, AgentError> {
-        Ok(Self { addr })
+        Ok(Self { _addr: addr })
     }
 }
 
@@ -76,7 +76,7 @@ impl AgentService for Agent {
     async fn start_node(
         self,
         _: tarpc::context::Context,
-        request: StartNodeRequest,
+        _request: StartNodeRequest,
     ) -> StartNodeResponse {
         StartNodeResponse::Error
     }

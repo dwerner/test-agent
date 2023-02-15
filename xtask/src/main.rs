@@ -1,6 +1,6 @@
 use std::{
     ffi::OsString,
-    io::{BufRead, BufReader},
+    io::BufRead,
     net::TcpListener,
     path::PathBuf,
     thread::JoinHandle,
@@ -16,7 +16,7 @@ enum Command {
     BuildAll,
     RunServerAndClient,
     RunServer,
-    GenerateSelfSignedCert,
+    GenerateSelfSignedCert{hostname: String},
 }
 
 impl Command {
@@ -30,7 +30,7 @@ impl Command {
             }
             Command::RunServer => cargo_run_server(),
             Command::RunServerAndClient => cargo_run_server_and_client(),
-            Command::GenerateSelfSignedCert => generate_cert_and_key_files(),
+            Command::GenerateSelfSignedCert{hostname} => generate_cert_and_key_files(&hostname),
         }
     }
 }
@@ -59,7 +59,7 @@ fn main() {
 }
 
 fn port_already_bound(port: u16) -> bool {
-    TcpListener::bind("127.0.0.1:8080").is_err()
+    TcpListener::bind(format!("0.0.0.0:{port}")).is_err()
 }
 
 // Panic if we aren't in the project root.
@@ -98,12 +98,6 @@ fn cargo_build_all() -> Result<(), std::io::Error> {
     Ok(())
 }
 
-fn cargo_x_bin(cargo_cmd: &str, bin_name: &str) -> Result<(), std::io::Error> {
-    let output = cmd!("cargo", cargo_cmd, "--bin", bin_name).run()?;
-    println!("xtask fmt {}", String::from_utf8_lossy(&output.stdout));
-    Ok(())
-}
-
 fn cargo_run_server_and_client() -> Result<(), std::io::Error> {
     println!("started server");
     let daemon = cargo_run_and_read("daemon")?;
@@ -139,7 +133,7 @@ fn cargo_run_and_read(
     }))
 }
 
-fn generate_cert_and_key_files() -> Result<(), std::io::Error> {
+fn generate_cert_and_key_files(hostname: &str) -> Result<(), std::io::Error> {
     cmd!(
         "openssl",
         "req",
@@ -152,7 +146,7 @@ fn generate_cert_and_key_files() -> Result<(), std::io::Error> {
         "-out",
         "assets/cert.pem",
         "-subj",
-        "/C=CA/ST=BC/L=Vancouver/O=Dis/CN=www.example.com",
+        format!("/C=CA/ST=BC/L=Vancouver/O=Dis/CN={hostname}"),
     )
     .run()?;
     println!("generated a new cert and key");
