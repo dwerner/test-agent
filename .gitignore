@@ -4,9 +4,9 @@
 **/*.pem
 **/*.pem
 
-# temp dir for agent 
+# temp dir for agent
 temp
 # fetch dir for client
 fetch
-# xcasper build directory
-xcasper-build
+# xcasper checkout/build directory
+xcasper-checkout
