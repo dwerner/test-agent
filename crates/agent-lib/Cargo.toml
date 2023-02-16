@@ -12,11 +12,9 @@ anyhow = { workspace = true }
 duct = { workspace = true }
 serde = { workspace = true }
 tarpc = { workspace = true }
-libc = { workspace = true }
 
 pin-project = { workspace = true }
 rustls = { workspace = true }
-rustls-native-certs = { workspace = true }
 
 structopt = { workspace = true }
 tokio = { workspace = true }

@@ -1,5 +1,12 @@
 /target
 
+# we have a convention of using .pem for all keys+certs, don't ever check them in.
 **/*.pem
 **/*.pem
+
+# temp dir for agent 
 temp
+# fetch dir for client
+fetch
+# xcasper build directory
+xcasper-build

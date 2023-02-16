@@ -11,7 +11,16 @@ enum Command {
     BuildAll,
     RunServerAndClient,
     RunServer,
-    GenerateSelfSignedCert { hostname: String },
+    GenerateSelfSignedCert {
+        hostname: String,
+    },
+    /// Create a dist tarball of the agent, with a given version number provided (manual)
+    Dist {
+        version: u32,
+        #[structopt(short, long)]
+        regenerate_key_and_certificate: bool,
+    },
+    CleanDist,
 }
 
 impl Command {
@@ -26,8 +35,53 @@ impl Command {
             Command::RunServer => cargo_run_server(),
             Command::RunServerAndClient => cargo_run_server_and_client(),
             Command::GenerateSelfSignedCert { hostname } => generate_cert_and_key_files(&hostname),
+            Command::CleanDist => {
+                cmd!("rm", "-rf", "target/dist").run()?;
+                Ok(())
+            }
+            Command::Dist {
+                version,
+                regenerate_key_and_certificate,
+            } => create_dist_tarball(version, regenerate_key_and_certificate),
         }
     }
+}
+
+fn create_dist_tarball(
+    version: u32,
+    regenerate_key_and_certificate: bool,
+) -> Result<(), std::io::Error> {
+    if regenerate_key_and_certificate {
+        cmd!(
+            "cargo",
+            "xtask",
+            "generate-self-signed-cert",
+            format!("agent")
+        )
+        .run()?;
+    }
+
+    cmd!("cargo", "build", "--release").run()?;
+    cmd!("mkdir", "-p", "target/dist/assets").run()?;
+    // copy artifacts to dist dir.
+    cmd!("cp", "target/release/daemon", "target/dist").run()?;
+    cmd!("cp", "target/release/client", "target/dist").run()?;
+    cmd!("cp", format!("assets/agent-crt.pem"), "target/dist/assets/").run()?;
+    cmd!("cp", format!("assets/agent-key.pem"), "target/dist/assets/").run()?;
+
+    // tar up dist file. Will be compressed with zstd when sent.
+    println!("Creating tar file:");
+    cmd!(
+        "tar",
+        "-cvf",
+        format!("target/dist-{version}.tar"),
+        "-C",
+        "target",
+        "dist",
+    )
+    .run()?;
+    println!("agent dist tarball created in target/dist-{version}.tar");
+    Ok(())
 }
 
 #[derive(StructOpt)]
@@ -41,7 +95,7 @@ fn main() {
     std::env::set_var("RUST_BACKTRACE", "full");
 
     if port_already_bound(8081) {
-        println!("daemon port already bound");
+        println!("warning daemon port is already bound");
         return;
     }
 
@@ -139,7 +193,7 @@ fn generate_cert_and_key_files(hostname: &str) -> Result<(), std::io::Error> {
         "-keyout",
         format!("assets/{hostname}-key.pem"),
         "-out",
-        format!("assets/{hostname}-cert.pem"),
+        format!("assets/{hostname}-crt.pem"),
         "-subj",
         format!("/C=CA/ST=BC/L=Vancouver/O=Dis/CN={hostname}"),
     )

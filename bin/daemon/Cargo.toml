@@ -9,10 +9,6 @@ edition = "2021"
 [dependencies]
 agent-lib = { path = "../../crates/agent-lib" }
 
-libc = { workspace = true }
-
-apt-cmd = { workspace = true }
-async-process = { workspace = true }
 anyhow ={ workspace = true } 
 structopt = { workspace = true }
 sudo = { workspace = true }
@@ -20,5 +16,4 @@ tarpc = { workspace = true }
 tokio = { workspace = true }
 thiserror = { workspace = true }
 futures = { workspace = true }
-rustls-pemfile = { workspace=true }
 

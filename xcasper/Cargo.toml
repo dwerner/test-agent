@@ -1,0 +1,14 @@
+[package]
+name = "xcasper"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+git2 = "0.16"
+casper-node = { workspace = true }
+casper-types = { workspace = true }
+#casper-client = { workspace = true }
+
+anyhow = { workspace = true }
+duct = { workspace = true }
+structopt = { workspace = true }

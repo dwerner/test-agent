@@ -35,6 +35,8 @@ use structopt::StructOpt;
 /// Needless to say, but this service is designed to be used in a debug environment
 #[tarpc::service]
 pub trait AgentService {
+    /// Send a new binary package, unpack, install and start it, then quit the current version.
+    async fn self_update(req: AgentUpdateRequest) -> AgentUpdateResponse;
     /// Push a file to the host running the agent.
     async fn put_file(req: PutFileRequest) -> PutFileResponse;
     /// Fetch a file from the host running the agent.
@@ -45,6 +47,21 @@ pub trait AgentService {
     async fn install_package(request: InstallPackageRequest) -> InstallPackageResponse;
     /// Start a service with the given parameters on the host running the agent.
     async fn start_service(request: StartServiceRequest) -> StartServiceResponse;
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AgentUpdateRequest {
+    new_version: u32,
+    dist_tarball: CompressedWireFile,
+}
+
+#[derive(Debug, Serialize, Deserialize, StructOpt)]
+pub enum AgentUpdateResponse {
+    Success {
+        old_version: u32,
+        new_version: u32,
+        new_pid: u16,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize, StructOpt)]
@@ -74,12 +91,14 @@ pub enum StartServiceResponse {
 
 #[derive(Debug, Serialize, Deserialize, StructOpt)]
 pub struct FetchFileRequest {
-    pub target_path: PathBuf,
+    pub host_src_path: PathBuf,
+    pub filename: PathBuf,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum FetchFileResponse {
     Success { file: CompressedWireFile },
+    Error,
 }
 
 #[derive(Debug, Serialize, Deserialize, StructOpt)]
@@ -120,33 +139,10 @@ impl PutFileRequest {
         src_path: &PathBuf,
         target_path: &PathBuf,
     ) -> Result<Self, MessageError> {
-        let file = File::open(src_path).map_err(|err| MessageError::OpenFile {
-            path: src_path.clone(),
-            err,
-        })?;
-
-        let filename = target_path
-            .file_name()
-            .map(|os_str| os_str.to_str())
-            .flatten()
-            .ok_or_else(|| MessageError::NoFileName)?
-            .to_string();
-
-        let reader = BufReader::new(file);
-
-        let zstd_compressed_data =
-            zstd::encode_all(reader, 3).map_err(|err| MessageError::Compress {
-                path: src_path.clone(),
-                err,
-            })?;
-
         Ok(Self {
             target_perms: 0,
             target_path: target_path.clone(),
-            file: CompressedWireFile {
-                filename,
-                zstd_compressed_data,
-            },
+            file: CompressedWireFile::load_and_compress(src_path, target_path)?,
         })
     }
 }
@@ -164,18 +160,62 @@ pub struct CompressedWireFile {
 }
 
 impl CompressedWireFile {
-    /// On the agent side, deserialized but needs to be put to disk.
-    pub fn into_temp_file_on_disk(self) -> Result<(File, PathBuf), std::io::Error> {
+    pub fn load_and_compress(
+        src_path: &PathBuf,
+        target_path: &PathBuf,
+    ) -> Result<Self, MessageError> {
+        let file = File::open(src_path).map_err(|err| MessageError::OpenFile {
+            path: src_path.clone(),
+            err,
+        })?;
+        let filename = file_name_from_path(target_path)?;
+        let reader = BufReader::new(file);
+        let zstd_compressed_data =
+            zstd::encode_all(reader, 3).map_err(|err| MessageError::Compress {
+                path: src_path.clone(),
+                err,
+            })?;
+        Ok(CompressedWireFile {
+            filename,
+            zstd_compressed_data,
+        })
+    }
+
+    /// Decompresses and then writes a compressed file message to disk as the file it represents.
+    /// Assumes the directory it's writing into exists.
+    pub fn into_file_on_disk(self, destination_path: &PathBuf) -> Result<(), std::io::Error> {
         let mut data = Cursor::new(self.zstd_compressed_data);
-        let mut target_temp_path = PathBuf::from("./temp");
-        fs::create_dir_all(&target_temp_path)?;
-        target_temp_path.push(self.filename);
-        let file = File::create(&target_temp_path)?;
+        let file = File::create(destination_path)?;
         let mut decoder = zstd::Decoder::new(&mut data)?;
         let mut writer = BufWriter::new(file);
         std::io::copy(&mut decoder, &mut writer)?;
         writer.flush()?;
-        let file = writer.into_inner()?;
-        Ok((file, target_temp_path))
+        Ok(())
+    }
+    /// On the agent side, deserialized but needs to be put to disk.
+    pub fn into_temp_file_on_disk(self) -> Result<PathBuf, std::io::Error> {
+        let mut target_temp_path = PathBuf::from("./temp");
+        fs::create_dir_all(&target_temp_path)?;
+        target_temp_path.push(&self.filename);
+        self.into_file_on_disk(&target_temp_path)?;
+        Ok(target_temp_path)
+    }
+}
+
+pub fn file_name_from_path(target_path: &PathBuf) -> Result<String, MessageError> {
+    let filename = target_path
+        .file_name()
+        .map(|os_str| os_str.to_str())
+        .flatten()
+        .ok_or_else(|| MessageError::NoFileName)?
+        .to_string();
+    Ok(filename)
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn round_trip_compress_decompress() {
+        todo!()
     }
 }

@@ -246,12 +246,13 @@ where
 pub async fn connect(
     addr: &SocketAddr,
     cert_file: &PathBuf,
+    key_file: &PathBuf,
 ) -> Result<client::TlsStream<TcpStream>, anyhow::Error> {
     let mut roots = rustls::RootCertStore::empty();
 
     // only valid for self signed certs, which is what we have.
     let end_entity = load_cert(&cert_file)?;
-    let key = load_key(&PathBuf::from("assets/localhost-key.pem"))?;
+    let key = load_key(key_file)?;
 
     roots.add(&end_entity)?;
     let mut config = rustls::ClientConfig::builder()
