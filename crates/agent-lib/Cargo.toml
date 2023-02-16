@@ -24,5 +24,6 @@ tokio-rustls = { workspace = true }
 tokio-util = { workspace = true }
 tokio-serde = { workspace = true }
 rustls-pemfile = { workspace = true }
-
-futures = {workspace =true}
+futures = { workspace =true }
+zstd = { workspace = true }
+thiserror = { workspace = true }

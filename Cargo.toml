@@ -37,3 +37,4 @@ rustls = { version = "0.20", features = ["dangerous_configuration"]}
 rustls-native-certs = "0.6"
 rustls-pemfile = "1"
 pin-project = "1"
+zstd = "0.12"

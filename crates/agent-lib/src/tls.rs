@@ -1,7 +1,6 @@
 use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
-use std::net::{IpAddr, Ipv6Addr};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::task::Waker;
@@ -128,7 +127,7 @@ where
     Codec: Serializer<SinkItem> + Deserializer<Item>,
     CodecFn: Fn() -> Codec,
 {
-    println!("listening on {addr}");
+    println!("serving tls connections on {addr}");
     let acceptor = TlsAcceptor::from(Arc::new(config));
     let listener = TcpListener::bind(addr).await?;
     let local_addr = listener.local_addr()?;
@@ -235,8 +234,7 @@ where
         .with_no_client_auth()
         .with_single_cert(vec![cert], key)?;
 
-    let mut listener =
-        listen::<I, SinkItem, Codec, CodecFn>(&addr, config, codec_fn).await?;
+    let mut listener = listen::<I, SinkItem, Codec, CodecFn>(&addr, config, codec_fn).await?;
 
     listener
         .config_mut()
@@ -267,7 +265,9 @@ pub async fn connect(
 
     let connector = TlsConnector::from(Arc::new(config));
     let stream = TcpStream::connect(addr).await?;
-    Ok(connector.connect(rustls::ServerName::IpAddress(addr.ip()), stream).await?)
+    Ok(connector
+        .connect(rustls::ServerName::IpAddress(addr.ip()), stream)
+        .await?)
 }
 
 fn load_key(key_file: &PathBuf) -> Result<rustls::PrivateKey, anyhow::Error> {

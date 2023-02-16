@@ -32,10 +32,12 @@ dependencies = [
  "serde",
  "structopt",
  "tarpc",
+ "thiserror",
  "tokio",
  "tokio-rustls",
  "tokio-serde",
  "tokio-util",
+ "zstd",
 ]
 
 [[package]]
@@ -370,6 +372,9 @@ name = "cc"
 version = "1.0.73"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2fff2a6927b3bb87f9595d67196a70493f627687a71d87a0d692242c33f58c11"
+dependencies = [
+ "jobserver",
+]
 
 [[package]]
 name = "cfg-if"
@@ -960,6 +965,15 @@ name = "itoa"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c8af84674fe1f223a982c933a0ee1086ac4d4052aa0fb8060c12c6ad838e754"
+
+[[package]]
+name = "jobserver"
+version = "0.1.25"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "068b1ee6743e4d11fb9c6a1e6064b3693a1b600e7f5f5988047d98b3dc9fb90b"
+dependencies = [
+ "libc",
+]
 
 [[package]]
 name = "js-sys"
@@ -2291,4 +2305,34 @@ dependencies = [
  "colorful",
  "duct",
  "structopt",
+]
+
+[[package]]
+name = "zstd"
+version = "0.12.3+zstd.1.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "76eea132fb024e0e13fd9c2f5d5d595d8a967aa72382ac2f9d39fcc95afd0806"
+dependencies = [
+ "zstd-safe",
+]
+
+[[package]]
+name = "zstd-safe"
+version = "6.0.4+zstd.1.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7afb4b54b8910cf5447638cb54bf4e8a65cbedd783af98b98c62ffe91f185543"
+dependencies = [
+ "libc",
+ "zstd-sys",
+]
+
+[[package]]
+name = "zstd-sys"
+version = "2.0.7+zstd.1.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "94509c3ba2fe55294d752b79842c530ccfab760192521df74a081a78d2b3c7f5"
+dependencies = [
+ "cc",
+ "libc",
+ "pkg-config",
 ]

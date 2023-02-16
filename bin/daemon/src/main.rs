@@ -12,7 +12,6 @@ use tarpc::{
     tokio_serde::formats::Bincode,
 };
 
-
 #[derive(Debug, StructOpt)]
 enum Args {
     Serve {
@@ -22,7 +21,7 @@ enum Args {
         cert: PathBuf,
         #[structopt(default_value = "assets/localhost-key.pem")]
         key: PathBuf,
-    }
+    },
 }
 
 #[tokio::main]
@@ -32,13 +31,7 @@ async fn main() -> anyhow::Result<()> {
     let Args::Serve { addr, cert, key } = args;
     //sudo::escalate_if_needed().unwrap();
     // println!("Successfully escalated privileges...");
-    let listener = tls::serve(
-        addr,
-        cert,
-        key,
-        Bincode::default,
-    )
-    .await?;
+    let listener = tls::serve(addr, cert, key, Bincode::default).await?;
     listener
         .filter_map(|r| {
             let transport = match r {
@@ -54,8 +47,13 @@ async fn main() -> anyhow::Result<()> {
         //.max_channels_per_key(1, |t| t.transport().peer_addr().unwrap().ip())
         .map(|channel| {
             println!("creating a new channel");
-            let server = Agent::new(channel.transport().peer_addr().unwrap())
-                .expect("unable to create agent");
+            let server = Agent::new(
+                channel
+                    .transport()
+                    .peer_addr()
+                    .expect("TODO: handle client closed connection"),
+            )
+            .expect("unable to create agent");
             channel.execute(server.serve())
         })
         .buffer_unordered(10)
@@ -82,13 +80,25 @@ impl Agent {
 
 #[tarpc::server]
 impl AgentService for Agent {
-    async fn put_file(
-        self,
-        _ctx: tarpc::context::Context,
-        _req: PutFileRequest,
-    ) -> PutFileResponse {
-        todo!()
+    async fn put_file(self, _ctx: tarpc::context::Context, req: PutFileRequest) -> PutFileResponse {
+        let PutFileRequest {
+            target_path,
+            target_perms,
+            file,
+        } = req;
+
+        let (tempfile, temp_path) = file
+            .into_temp_file_on_disk()
+            .expect("TODO - unable to write temp file");
+        drop(tempfile); // TODO: maybe we dont' pass it back
+        println!(
+            "would write to disk: {}, with perms {target_perms} temp file in {}",
+            temp_path.display(),
+            target_path.display()
+        );
+        PutFileResponse::Success
     }
+
     async fn fetch_file(
         self,
         _ctx: tarpc::context::Context,
