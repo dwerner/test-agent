@@ -1,10 +1,5 @@
 use std::{
-    ffi::OsString,
-    io::BufRead,
-    net::TcpListener,
-    path::PathBuf,
-    thread::JoinHandle,
-    time::Duration,
+    ffi::OsString, io::BufRead, net::TcpListener, path::PathBuf, thread::JoinHandle, time::Duration,
 };
 
 use duct::cmd;
@@ -16,7 +11,7 @@ enum Command {
     BuildAll,
     RunServerAndClient,
     RunServer,
-    GenerateSelfSignedCert{hostname: String},
+    GenerateSelfSignedCert { hostname: String },
 }
 
 impl Command {
@@ -30,7 +25,7 @@ impl Command {
             }
             Command::RunServer => cargo_run_server(),
             Command::RunServerAndClient => cargo_run_server_and_client(),
-            Command::GenerateSelfSignedCert{hostname} => generate_cert_and_key_files(&hostname),
+            Command::GenerateSelfSignedCert { hostname } => generate_cert_and_key_files(&hostname),
         }
     }
 }

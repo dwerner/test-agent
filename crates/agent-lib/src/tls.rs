@@ -2,6 +2,7 @@ use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
 use std::net::{IpAddr, Ipv6Addr};
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::task::Waker;
 use std::{
@@ -118,7 +119,7 @@ impl<Item, SinkItem, Codec> Transport<Item, SinkItem, Codec> {
 
 /// Listens on `addr`, wrapping accepted connections in TCP transports.
 pub async fn listen<Item, SinkItem, Codec, CodecFn>(
-    addr: &(IpAddr, u16),
+    addr: &SocketAddr,
     config: ServerConfig,
     codec_fn: CodecFn,
 ) -> io::Result<TlsIncoming<Item, SinkItem, Codec, CodecFn>>
@@ -127,7 +128,7 @@ where
     Codec: Serializer<SinkItem> + Deserializer<Item>,
     CodecFn: Fn() -> Codec,
 {
-    println!("listen");
+    println!("listening on {addr}");
     let acceptor = TlsAcceptor::from(Arc::new(config));
     let listener = TcpListener::bind(addr).await?;
     let local_addr = listener.local_addr()?;
@@ -216,10 +217,9 @@ where
 }
 
 pub async fn serve<I, SinkItem, Codec, CodecFn>(
-    _domain: &str,
-    _port: u16,
-    cert_file: &str,
-    key_file: &str,
+    addr: SocketAddr,
+    cert_file: PathBuf,
+    key_file: PathBuf,
     codec_fn: CodecFn,
 ) -> Result<TlsIncoming<I, SinkItem, Codec, CodecFn>, anyhow::Error>
 where
@@ -227,23 +227,16 @@ where
     Codec: Serializer<SinkItem> + Deserializer<I>,
     CodecFn: Fn() -> Codec,
 {
-    // let mut roots = rustls::RootCertStore::empty();
-    // for cert in rustls_native_certs::load_native_certs().expect("could not load os certificates") {
-    //     roots.add(&rustls::Certificate(cert.0)).unwrap();
-    // }
+    let key = load_key(&key_file)?;
+    let cert = load_cert(&cert_file)?;
 
-    println!("beginning serve");
-
-    let key = load_key(key_file)?;
-    let cert = load_cert(cert_file)?;
     let config = rustls::ServerConfig::builder()
         .with_safe_defaults()
-        .with_no_client_auth() // TODO - verify client certificate
+        .with_no_client_auth()
         .with_single_cert(vec![cert], key)?;
 
-    let server_addr = (IpAddr::V6(Ipv6Addr::LOCALHOST), 8081);
     let mut listener =
-        listen::<I, SinkItem, Codec, CodecFn>(&server_addr, config, codec_fn).await?;
+        listen::<I, SinkItem, Codec, CodecFn>(&addr, config, codec_fn).await?;
 
     listener
         .config_mut()
@@ -253,33 +246,31 @@ where
 }
 
 pub async fn connect(
-    domain: &str,
-    port: u16,
-    cert_file: &str,
+    addr: &SocketAddr,
+    cert_file: &PathBuf,
 ) -> Result<client::TlsStream<TcpStream>, anyhow::Error> {
     let mut roots = rustls::RootCertStore::empty();
 
     // only valid for self signed certs, which is what we have.
-    let end_entity = load_cert(cert_file)?;
-    roots.add(&load_cert(cert_file)?)?;
+    let end_entity = load_cert(&cert_file)?;
+    let key = load_key(&PathBuf::from("assets/localhost-key.pem"))?;
+
+    roots.add(&end_entity)?;
     let mut config = rustls::ClientConfig::builder()
         .with_safe_defaults()
         .with_root_certificates(roots)
-        .with_no_client_auth();
+        .with_single_cert(vec![end_entity.clone()], key)?;
 
     config.dangerous().set_certificate_verifier(
         Arc::new(SelfSignedCertResolver { end_entity }) as Arc<dyn ServerCertVerifier>
     );
 
     let connector = TlsConnector::from(Arc::new(config));
-    let servername = rustls::ServerName::try_from(domain).unwrap();
-    let _host = format!("{}:{}", domain, port);
-    let server_addr = (IpAddr::V6(Ipv6Addr::LOCALHOST), 8081);
-    let stream = TcpStream::connect(server_addr).await?;
-    Ok(connector.connect(servername, stream).await?)
+    let stream = TcpStream::connect(addr).await?;
+    Ok(connector.connect(rustls::ServerName::IpAddress(addr.ip()), stream).await?)
 }
 
-fn load_key(key_file: &str) -> Result<rustls::PrivateKey, anyhow::Error> {
+fn load_key(key_file: &PathBuf) -> Result<rustls::PrivateKey, anyhow::Error> {
     let mut reader = BufReader::new(File::open(key_file)?);
     Ok(rustls::PrivateKey(
         match rustls_pemfile::read_one(&mut reader)? {
@@ -289,11 +280,11 @@ fn load_key(key_file: &str) -> Result<rustls::PrivateKey, anyhow::Error> {
     ))
 }
 
-fn load_cert(cert_file: &str) -> Result<rustls::Certificate, anyhow::Error> {
-    let mut reader = BufReader::new(File::open(&cert_file)?);
+fn load_cert(cert_file: &PathBuf) -> Result<rustls::Certificate, anyhow::Error> {
+    let mut reader = BufReader::new(File::open(cert_file)?);
     let certs = rustls_pemfile::certs(&mut reader)?;
     if certs.is_empty() {
-        return Err(anyhow::format_err!("no valid cert found in {cert_file}"));
+        return Err(anyhow::format_err!("no valid cert found in {cert_file:?}"));
     }
     Ok(rustls::Certificate(certs[0].clone()))
 }

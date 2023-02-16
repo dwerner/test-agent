@@ -1,30 +1,44 @@
-use std::{io::BufRead, net::SocketAddr};
+use std::{io::BufRead, net::SocketAddr, path::PathBuf};
 
 use agent_lib::{
-    pkg_manager, tls, AgentService, InstallPackageRequest, InstallPackageResponse,
-    StartNodeRequest, StartNodeResponse,
+    pkg_manager, tls, AgentService, FetchFileRequest, FetchFileResponse, InstallPackageRequest,
+    InstallPackageResponse, PutFileRequest, PutFileResponse, StartServiceRequest,
+    StartServiceResponse,
 };
 use futures::{future, StreamExt};
+use structopt::StructOpt;
 use tarpc::{
     server::{self, Channel},
     tokio_serde::formats::Bincode,
 };
 
+
+#[derive(Debug, StructOpt)]
+enum Args {
+    Serve {
+        #[structopt(default_value = "0.0.0.0:8081")]
+        addr: SocketAddr,
+        #[structopt(default_value = "assets/localhost-cert.pem")]
+        cert: PathBuf,
+        #[structopt(default_value = "assets/localhost-key.pem")]
+        key: PathBuf,
+    }
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // sudo::escalate_if_needed().unwrap();
+    let args = Args::from_args();
 
+    let Args::Serve { addr, cert, key } = args;
+    //sudo::escalate_if_needed().unwrap();
     // println!("Successfully escalated privileges...");
-
     let listener = tls::serve(
-        "0.0.0.0 TODO ME",
-        8081,
-        "assets/localhost-cert.pem",
-        "assets/localhost-key.pem",
+        addr,
+        cert,
+        key,
         Bincode::default,
     )
     .await?;
-
     listener
         .filter_map(|r| {
             let transport = match r {
@@ -34,13 +48,12 @@ async fn main() -> anyhow::Result<()> {
                     return future::ready(None);
                 }
             };
-            println!("got a transport");
             future::ready(Some(transport))
         })
         .map(server::BaseChannel::with_defaults)
         //.max_channels_per_key(1, |t| t.transport().peer_addr().unwrap().ip())
         .map(|channel| {
-            println!("creating a channel");
+            println!("creating a new channel");
             let server = Agent::new(channel.transport().peer_addr().unwrap())
                 .expect("unable to create agent");
             channel.execute(server.serve())
@@ -50,7 +63,6 @@ async fn main() -> anyhow::Result<()> {
             println!("did something ....");
         })
         .await;
-
     Ok(())
 }
 
@@ -70,15 +82,37 @@ impl Agent {
 
 #[tarpc::server]
 impl AgentService for Agent {
-    async fn start_node(
+    async fn put_file(
+        self,
+        _ctx: tarpc::context::Context,
+        _req: PutFileRequest,
+    ) -> PutFileResponse {
+        todo!()
+    }
+    async fn fetch_file(
+        self,
+        _ctx: tarpc::context::Context,
+        _req: FetchFileRequest,
+    ) -> FetchFileResponse {
+        todo!()
+    }
+    async fn stop_service(
+        self,
+        _ctx: tarpc::context::Context,
+        _request: StartServiceRequest,
+    ) -> StartServiceResponse {
+        todo!()
+    }
+
+    async fn start_service(
         self,
         _: tarpc::context::Context,
-        _request: StartNodeRequest,
-    ) -> StartNodeResponse {
+        _request: StartServiceRequest,
+    ) -> StartServiceResponse {
         for i in 0..10 {
             println!("did some work {i}");
         }
-        StartNodeResponse::Error
+        StartServiceResponse::Error
     }
 
     async fn install_package(

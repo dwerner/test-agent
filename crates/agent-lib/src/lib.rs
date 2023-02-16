@@ -4,11 +4,10 @@
 pub mod pkg_manager;
 pub mod tls;
 
+use std::path::PathBuf;
 
+use serde::{Deserialize, Serialize};
 use structopt::StructOpt;
-use tarpc::{
-    serde::{Deserialize, Serialize},
-};
 
 #[derive(Debug, Serialize, Deserialize, StructOpt)]
 pub struct InstallPackageRequest {
@@ -23,13 +22,13 @@ pub enum InstallPackageResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize, StructOpt)]
-pub struct StartNodeRequest {
+pub struct StartServiceRequest {
     // TODO something like a wrapper over systemd, casper-updater, and extended to support other things like heaptrack, valgrind, etc
     pub wrapper: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, StructOpt)]
-pub enum StartNodeResponse {
+pub enum StartServiceResponse {
     Success,
     Restarted,
     Error,
@@ -58,6 +57,51 @@ pub enum StartNodeResponse {
 /// Needless to say, but this service is designed to be used in a debug environment
 #[tarpc::service]
 pub trait AgentService {
+    async fn put_file(req: PutFileRequest) -> PutFileResponse;
+    async fn fetch_file(req: FetchFileRequest) -> FetchFileResponse;
+    async fn stop_service(request: StartServiceRequest) -> StartServiceResponse;
+
     async fn install_package(request: InstallPackageRequest) -> InstallPackageResponse;
-    async fn start_node(request: StartNodeRequest) -> StartNodeResponse;
+    async fn start_service(request: StartServiceRequest) -> StartServiceResponse;
+}
+
+#[derive(Debug, Serialize, Deserialize, StructOpt)]
+pub struct FetchFileRequest {
+    pub target_path: PathBuf,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum FetchFileResponse {
+    Success { file: CompressedWireFile },
+}
+
+#[derive(Debug, Serialize, Deserialize, StructOpt)]
+pub struct StopServiceRequest {
+    service: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, StructOpt)]
+pub enum StopServiceResponse {
+    Success,
+    Restarted,
+    Error,
+}
+
+/// Cannot be constructed directly from the commandline.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PutFileRequest {
+    pub target_path: PathBuf,
+    pub file: CompressedWireFile,
+}
+
+#[derive(Debug, Serialize, Deserialize, StructOpt)]
+pub enum PutFileResponse {
+    Success,
+    Error,
+}
+
+#[derive(Debug, Serialize, Deserialize, StructOpt)]
+pub struct CompressedWireFile {
+    pub filename: String,
+    pub zstd_compressed_data: Vec<u8>,
 }
