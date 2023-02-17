@@ -52,7 +52,7 @@ impl CheckoutAndCompileRustProject {
         Self {
             debug: false,
             git_url: CASPER_CLIENT_GIT_REPO.into(),
-            branch: DEFAULT_BRANCH.into(),
+            branch: "main".into(),
             remote: DEFAULT_REMOTE.into(),
             base_path: BUILD_DIR.into(),
             local_name: "casper-client".into(),
@@ -88,7 +88,7 @@ impl CheckoutAndCompileRustProject {
         Self {
             debug: false,
             git_url: CASPER_LAUNCHER_GIT_REPO.into(),
-            branch: DEFAULT_BRANCH.into(),
+            branch: "master".into(),
             remote: DEFAULT_REMOTE.into(),
             base_path: BUILD_DIR.into(),
             local_name: "casper-node-launcher".into(),
@@ -97,33 +97,18 @@ impl CheckoutAndCompileRustProject {
     }
 }
 
-/// Compile all defaults in separate threads with defaults.
+/// Compile all projects with default settings.
 pub fn compile_all_projects_in_separate_threads() -> Result<(), anyhow::Error> {
-    let threads = vec![
-        std::thread::spawn(|| {
-            checkout_and_compile(CheckoutAndCompileRustProject::client_defaults())
-        }),
-        std::thread::spawn(|| {
-            checkout_and_compile(CheckoutAndCompileRustProject::node_defaults())?;
-            // global state update gen is in the node repo, and depends on a checkout
-            checkout_and_compile(
-                CheckoutAndCompileRustProject::global_state_update_gen_defaults(),
-            )?;
-            Ok::<(), anyhow::Error>(())
-        }),
-        std::thread::spawn(|| {
-            checkout_and_compile(CheckoutAndCompileRustProject::launcher_defaults())
-        }),
-    ];
-    for thread in threads {
-        thread
-            .join()
-            .map_err(|err| anyhow::anyhow!("error in thread: {err:?}"))??;
-    }
+    checkout_and_compile(CheckoutAndCompileRustProject::client_defaults())?;
+    checkout_and_compile(CheckoutAndCompileRustProject::node_defaults())?;
+    // global state update gen is in the node repo, and depends on a checkout
+    checkout_and_compile(CheckoutAndCompileRustProject::global_state_update_gen_defaults())?;
+    checkout_and_compile(CheckoutAndCompileRustProject::launcher_defaults())?;
     Ok(())
 }
 
 // (Optionally) git checkout and compile project
+// Not thread safe as we change dirs
 pub fn checkout_and_compile(
     CheckoutAndCompileRustProject {
         debug,
@@ -135,29 +120,29 @@ pub fn checkout_and_compile(
         package_name,
     }: CheckoutAndCompileRustProject,
 ) -> Result<(), anyhow::Error> {
-    let mut target_path = base_path.clone();
-    target_path.push(&local_name);
+    let target_path = base_path.join(&local_name);
     println!("checking for local checkout");
-    if !Path::new(&base_path).exists() {
-        println!("checking out repo in {}", base_path.display());
-        cmd!("git", "clone", git_url, &base_path).run()?;
+    if !Path::new(&target_path).exists() {
+        println!("checking out repo in {}", target_path.display());
+        cmd!("git", "clone", git_url, &target_path).run()?;
     } else {
-        println!("found checkout in {}", base_path.display());
+        println!("found checkout in {}", target_path.display());
     }
 
     // TODO: injection of rustflags, capture of output
-    println!("compiling casper-node");
+    println!("compiling project {local_name} {package_name:?}");
 
     let starting_dir = std::env::current_dir()?;
-    let mut checkout_dir = starting_dir.clone();
-    checkout_dir.push(&base_path);
-    env::set_current_dir(checkout_dir)?;
+    env::set_current_dir(&target_path)?;
 
     // fetching and switching branches supports an existing checkout
     println!("updating repo - fetching remote: {remote}");
     cmd!("git", "fetch", remote).run()?;
 
-    println!("checkout out target branch {branch}");
+    println!(
+        "checking out target branch {branch} in {}",
+        target_path.display()
+    );
     cmd!("git", "checkout", branch).run()?;
 
     let pkg = package_name.unwrap_or(local_name);

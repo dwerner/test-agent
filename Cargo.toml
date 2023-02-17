@@ -7,6 +7,10 @@ members = [
     "xcasper", # container for nctl-related functionality
 ]
 
+exclude = [
+    "xcasper-build",
+]
+
 [workspace.dependencies]
 agent-lib = { path = "../../crates/agent-lib" }
 
