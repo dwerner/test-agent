@@ -2,7 +2,6 @@
 members = [
     "bin/client",
     "bin/daemon",
-    "bin/asset-generator",
     "crates/agent-lib",
     "xtask",
     "xcasper", # container for nctl-related functionality
