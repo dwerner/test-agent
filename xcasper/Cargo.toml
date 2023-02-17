@@ -6,8 +6,8 @@ edition = "2021"
 [dependencies]
 casper-node = { workspace = true }
 casper-types = { workspace = true }
-#casper-client = { workspace = true }
 
+const_format = { workspace = true }
 anyhow = { workspace = true }
 duct = { workspace = true }
 structopt = { workspace = true }

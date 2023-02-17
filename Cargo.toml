@@ -15,6 +15,7 @@ casper-types = { git = "http://github.com/casper-network/casper-node", branch = 
 casper-node = { git = "http://github.com/casper-network/casper-node", branch = "dev" }
 casper-client = { git = "http://github.com/casper-ecosystem/casper-client-rs", branch = "dev" }
 
+const_format = "0.2"
 anyhow = "1"
 async-process = "1.5.0"
 duct = "0.13"
@@ -37,3 +38,9 @@ rustls-native-certs = "0.6"
 rustls-pemfile = "1"
 pin-project = "1"
 zstd = "0.12"
+
+# this section should not be checked in with items uncommented - it serves as a local patch only
+
+[patch."http://github.com/casper-network/casper-node"]
+casper-types = { path = "../casper-node/types" }
+casper-node = { path = "../casper-node/node" }

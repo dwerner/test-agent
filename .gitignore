@@ -8,5 +8,5 @@
 temp
 # fetch dir for client
 fetch
-# xcasper checkout/build directory
-xcasper-checkout
+# xcasper build and asset directory
+xcasper-build

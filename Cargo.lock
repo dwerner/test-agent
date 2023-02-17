@@ -304,7 +304,6 @@ checksum = "ec8a7b6a70fde80372154c65702f00a0f56f3e1c36abbc6c440484be248856db"
 [[package]]
 name = "casper-execution-engine"
 version = "2.0.1"
-source = "git+http://github.com/casper-network/casper-node?branch=dev#70a6fa5ddf19a7ac38057a2661e8a84913cc57d5"
 dependencies = [
  "anyhow",
  "base16",
@@ -345,7 +344,6 @@ dependencies = [
 [[package]]
 name = "casper-hashing"
 version = "1.4.3"
-source = "git+http://github.com/casper-network/casper-node?branch=dev#70a6fa5ddf19a7ac38057a2661e8a84913cc57d5"
 dependencies = [
  "base16",
  "blake2",
@@ -364,7 +362,6 @@ dependencies = [
 [[package]]
 name = "casper-json-rpc"
 version = "0.1.0"
-source = "git+http://github.com/casper-network/casper-node?branch=dev#70a6fa5ddf19a7ac38057a2661e8a84913cc57d5"
 dependencies = [
  "bytes",
  "futures",
@@ -379,7 +376,6 @@ dependencies = [
 [[package]]
 name = "casper-node"
 version = "1.4.8"
-source = "git+http://github.com/casper-network/casper-node?branch=dev#70a6fa5ddf19a7ac38057a2661e8a84913cc57d5"
 dependencies = [
  "ansi_term",
  "anyhow",
@@ -464,7 +460,6 @@ dependencies = [
 [[package]]
 name = "casper-types"
 version = "1.5.0"
-source = "git+http://github.com/casper-network/casper-node?branch=dev#70a6fa5ddf19a7ac38057a2661e8a84913cc57d5"
 dependencies = [
  "base16",
  "base64 0.13.1",
@@ -543,6 +538,26 @@ dependencies = [
  "structopt",
  "tarpc",
  "tokio",
+]
+
+[[package]]
+name = "const_format"
+version = "0.2.30"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7309d9b4d3d2c0641e018d449232f2e28f1b22933c137f157d3dbc14228b8c0e"
+dependencies = [
+ "const_format_proc_macros",
+]
+
+[[package]]
+name = "const_format_proc_macros"
+version = "0.2.29"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d897f47bf7270cf70d370f8f98c1abb6d2d4cf60a6845d30e05bfb90c6568650"
+dependencies = [
+ "proc-macro2 1.0.43",
+ "quote 1.0.21",
+ "unicode-xid 0.2.4",
 ]
 
 [[package]]
@@ -3649,6 +3664,7 @@ dependencies = [
  "anyhow",
  "casper-node",
  "casper-types",
+ "const_format",
  "duct",
  "structopt",
 ]

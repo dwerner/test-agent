@@ -194,10 +194,10 @@ impl CompressedWireFile {
     }
     /// On the agent side, deserialized but needs to be put to disk.
     pub fn into_temp_file_on_disk(self) -> Result<PathBuf, std::io::Error> {
-        let mut target_temp_path = PathBuf::from("./temp");
+        let target_temp_path = PathBuf::from("./temp");
         fs::create_dir_all(&target_temp_path)?;
-        target_temp_path.push(&self.filename);
-        self.into_file_on_disk(&target_temp_path)?;
+        let target_file = target_temp_path.join(&self.filename);
+        self.into_file_on_disk(&target_file)?;
         Ok(target_temp_path)
     }
 }
