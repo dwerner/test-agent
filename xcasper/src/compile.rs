@@ -88,7 +88,7 @@ impl CheckoutAndCompileRustProject {
         Self {
             debug: false,
             git_url: CASPER_LAUNCHER_GIT_REPO.into(),
-            branch: "master".into(),
+            branch: "main".into(),
             remote: DEFAULT_REMOTE.into(),
             base_path: BUILD_DIR.into(),
             local_name: "casper-node-launcher".into(),

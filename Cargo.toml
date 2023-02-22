@@ -20,6 +20,7 @@ casper-client = { git = "http://github.com/casper-ecosystem/casper-client-rs", b
 
 const_format = "0.2"
 anyhow = "1"
+envsubst = "0.2"
 async-process = "1.5.0"
 duct = "0.13"
 futures = "0.3"
@@ -35,6 +36,7 @@ tokio-rustls = { version = "0.23" }
 tokio-util = { version = "0.7" }
 tokio-serde = { version = "0.8"}
 serde = { version = "1", features = ["derive"]}
+toml = "0.7"
 sudo = "0.6"
 rustls = { version = "0.20", features = ["dangerous_configuration"]}
 rustls-native-certs = "0.6"
