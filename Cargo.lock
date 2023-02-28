@@ -296,6 +296,7 @@ checksum = "89b2fd2a0dcf38d7971e2194b6b6eebab45ae01067456a7fd93d5547a61b70be"
 [[package]]
 name = "casper-execution-engine"
 version = "2.0.1"
+source = "git+http://github.com/casper-network/casper-node?branch=dev#da2ae6bfcb9c639e70b5da679b80f317abfcf12e"
 dependencies = [
  "anyhow",
  "base16",
@@ -336,6 +337,7 @@ dependencies = [
 [[package]]
 name = "casper-hashing"
 version = "1.4.3"
+source = "git+http://github.com/casper-network/casper-node?branch=dev#da2ae6bfcb9c639e70b5da679b80f317abfcf12e"
 dependencies = [
  "base16",
  "blake2",
@@ -354,6 +356,7 @@ dependencies = [
 [[package]]
 name = "casper-json-rpc"
 version = "0.1.0"
+source = "git+http://github.com/casper-network/casper-node?branch=dev#da2ae6bfcb9c639e70b5da679b80f317abfcf12e"
 dependencies = [
  "bytes",
  "futures",
@@ -368,6 +371,7 @@ dependencies = [
 [[package]]
 name = "casper-node"
 version = "1.4.8"
+source = "git+http://github.com/casper-network/casper-node?branch=dev#da2ae6bfcb9c639e70b5da679b80f317abfcf12e"
 dependencies = [
  "ansi_term",
  "anyhow",
@@ -452,6 +456,7 @@ dependencies = [
 [[package]]
 name = "casper-types"
 version = "1.5.0"
+source = "git+http://github.com/casper-network/casper-node?branch=dev#da2ae6bfcb9c639e70b5da679b80f317abfcf12e"
 dependencies = [
  "base16",
  "base64 0.13.1",

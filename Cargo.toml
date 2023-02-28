@@ -45,8 +45,3 @@ rustls-pemfile = "1"
 pin-project = "1"
 zstd = "0.12"
 
-# this section should not be checked in with items uncommented - it serves as a local patch only
-
-[patch."http://github.com/casper-network/casper-node"]
-casper-types = { path = "../casper-node/types" }
-casper-node = { path = "../casper-node/node" }
