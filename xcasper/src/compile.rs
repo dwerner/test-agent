@@ -13,6 +13,7 @@ const DEFAULT_REMOTE: &str = "origin";
 
 const CASPER_NODE_GIT_REPO: &str = "https://github.com/casper-network/casper-node";
 const CASPER_CLIENT_GIT_REPO: &str = "https://github.com/casper-ecosystem/casper-client-rs";
+const CASPER_DB_UTILS_REPO: &str = "https://github.com/casper-network/casper-db-utils";
 const CASPER_LAUNCHER_GIT_REPO: &str = "https://github.com/casper-network/casper-node-launcher";
 
 #[derive(StructOpt, Debug)]
@@ -47,6 +48,17 @@ pub struct CheckoutAndCompileRustProject {
 }
 
 impl CheckoutAndCompileRustProject {
+    pub(crate) fn db_utils_defaults() -> Self {
+        Self {
+            debug: false,
+            git_url: CASPER_DB_UTILS_REPO.into(),
+            branch: "master".into(),
+            remote: DEFAULT_REMOTE.into(),
+            base_path: BUILD_DIR.into(),
+            local_name: "casper-db-utils".into(),
+            package_name: None,
+        }
+    }
     /// Defaults for compiling the dev branch of the node repo.
     pub(crate) fn client_defaults() -> Self {
         Self {
