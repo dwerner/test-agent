@@ -1,5 +1,4 @@
 use std::{
-    collections::HashMap,
     fs::{self, File},
     io::{BufWriter, Write},
     path::{Path, PathBuf},
@@ -7,7 +6,9 @@ use std::{
 
 use casper_node::{
     types::{
-        chainspec::{AccountConfig, AccountsConfig, ChainspecRawBytes, ValidatorConfig},
+        chainspec::{
+            AccountConfig, AccountsConfig, ChainspecRawBytes, DelegatorConfig, ValidatorConfig,
+        },
         Chainspec,
     },
     MainReactorConfig,
@@ -23,11 +24,10 @@ const ED25519: &str = "Ed25519";
 /// Name of secp256k1 algorithm.
 const SECP256K1: &str = "secp256k1";
 
-use casper_types::{Motes, PublicKey, SecretKey, TimeDiff, Timestamp, U512};
+use casper_types::{Motes, PublicKey, SecretKey, U512};
 use const_format::concatcp;
 use duct::cmd;
 use structopt::StructOpt;
-use toml::Value;
 
 use crate::common;
 
@@ -41,15 +41,33 @@ pub struct GenerateNetworkAssets {
     assets_path: PathBuf,
 
     #[structopt(subcommand)]
-    source: Generate,
+    source: Params,
 }
 
 #[derive(StructOpt, Debug)]
-pub struct Generate {
-    validator_count: u32,
-    validator_balance: u64,
-    delegator_count: u32,
-    delegator_balance: u64,
+pub enum Params {
+    Generate {
+        validator_count: u32,
+        validator_balance: u64,
+        validator_bonded_amount: u64,
+        delegator_count: u32,
+        delegator_balance: u64,
+        delegated_amount: u64,
+    },
+    Default,
+}
+
+impl Default for Params {
+    fn default() -> Self {
+        Params::Generate {
+            validator_count: 10,
+            validator_balance: 100_000_000_000,
+            validator_bonded_amount: 100_000_000_000,
+            delegator_count: 100,
+            delegator_balance: 1_000_000,
+            delegated_amount: 500_000,
+        }
+    }
 }
 
 #[deprecated]
@@ -57,13 +75,7 @@ pub fn generate_network_assets(
     GenerateNetworkAssets {
         network_name,
         assets_path,
-        source:
-            Generate {
-                validator_count,
-                validator_balance,
-                delegator_count,
-                delegator_balance,
-            },
+        source,
     }: GenerateNetworkAssets,
 ) -> Result<(), anyhow::Error> {
     println!("generating network assets for {network_name}");
@@ -78,113 +90,72 @@ pub fn generate_network_assets(
     fs::create_dir_all(&network_dir)?;
 
     let network_dir = &network_dir;
-    // TODO:
-    // - generate accounts.toml
-    // - generate public+private key pairs
-    // - generate chainspec.toml
-    // - generate config.toml
-    let mut accounts = vec![];
-    for v in 0..validator_count {
-        let validator = create_validator_account(v, network_dir, 12345, 12345)?;
-        accounts.push(validator);
-    }
-    let accounts_config = AccountsConfig::new(accounts, vec![]);
 
-    {
-        // Write accounts.toml
-        let accounts = toml::to_string_pretty(&accounts_config)?;
-        let mut writer = BufWriter::new(File::create(&network_dir.join("accounts.toml"))?);
-        writer.write_all(accounts.as_bytes())?;
-        writer.flush()?;
-    }
-
-    Ok(())
-}
-
-fn generate_assets_from_local_template(
-    template_src_path: &PathBuf,
-    assets_target_path: &PathBuf,
-    genesis_delay_secs: u32,
-) -> Result<(), anyhow::Error> {
-    let accounts_toml_path = template_src_path.join("accounts.toml");
-    let config_toml_path = template_src_path.join("config.toml");
-    let chainspec_template_path = template_src_path.join("chainspec.toml.in");
-
-    let target_chainspec_path = assets_target_path.join("chainspec.toml");
-
-    {
-        use casper_node::utils::Loadable;
-        // write chainspec
-        let chainspec_template = fs::read_to_string(chainspec_template_path)?;
-        let timestamp = Timestamp::now() + TimeDiff::from_seconds(genesis_delay_secs);
-
-        let mut values = HashMap::new();
-        values.insert("TIMESTAMP".into(), timestamp.to_string());
-        let chainspec_str = envsubst::substitute(&chainspec_template, &values)?;
-        let mut writer = BufWriter::new(File::create(&target_chainspec_path)?);
-        writer.write_all(chainspec_str.as_bytes())?;
-        writer.flush()?;
-        let (chainspec, _chainspec_raw_bytes) =
-            <(Chainspec, ChainspecRawBytes)>::from_path(&assets_target_path)?;
-
-        if !chainspec.is_valid() {
-            return Err(anyhow::anyhow!("generated chainspec is invalid"));
-        }
-    }
-
-    // write config.toml
-    cmd!(
-        "cp",
-        &config_toml_path,
-        assets_target_path.join("config.toml")
-    )
-    .run()?;
-
-    // write accounts.toml
-    cmd!(
-        "cp",
-        &accounts_toml_path,
-        assets_target_path.join("accounts.toml")
-    )
-    .run()?;
-
-    let config_str = fs::read_to_string(&config_toml_path)?;
-    let config_table: Value = toml::from_str(&config_str)?;
-    let _main_config: MainReactorConfig = config_table.try_into()?;
-
-    Ok(())
-}
-
-fn generate_assets_with_counts(
-    Generate {
+    if let Params::Generate {
         validator_count,
         validator_balance,
+        validator_bonded_amount,
         delegator_count,
         delegator_balance,
-    }: Generate,
-    network_dir: &PathBuf,
-) -> Result<(), anyhow::Error> {
-    // TODO:
-    // - generate accounts.toml
-    // - generate public+private key pairs
-    // - generate chainspec.toml
-    // - generate config.toml
-    let mut accounts = vec![];
-    for v in 0..validator_count {
-        let validator = create_validator_account(v, network_dir, 12345, 12345)?;
-        accounts.push(validator);
-    }
-    let accounts_config = AccountsConfig::new(accounts, vec![]);
+        delegated_amount,
+    } = match source {
+        params @ Params::Generate { .. } => params,
+        Params::Default => Params::default(),
+    } {
+        // TODO:
+        // - generate chainspec.toml
+        // - generate config.toml
 
-    {
+        // - generate accounts.toml
+        // - generate public+private key pairs
+        let mut accounts = vec![];
+        for v in 0..validator_count {
+            let validator = create_validator_account(
+                v,
+                network_dir,
+                validator_balance,
+                validator_bonded_amount,
+            )?;
+            accounts.push(validator);
+        }
+        let mut delegators = vec![];
+        let mut validator_cycle_iter = accounts.iter().cycle();
+        for d in 0..delegator_count as usize {
+            let validator = validator_cycle_iter
+                .next()
+                .expect("None from an infinite loop?");
+            let delegator = create_delegator_account(
+                d as u32,
+                network_dir,
+                validator.public_key.clone(),
+                delegator_balance,
+                delegated_amount,
+            )?;
+            delegators.push(delegator);
+        }
+        let accounts_config = AccountsConfig::new(accounts, delegators);
+
         // Write accounts.toml
         let accounts = toml::to_string_pretty(&accounts_config)?;
         let mut writer = BufWriter::new(File::create(&network_dir.join("accounts.toml"))?);
         writer.write_all(accounts.as_bytes())?;
         writer.flush()?;
-    }
 
-    {}
+        cmd!(
+            "cp",
+            "production/chainspec.toml",
+            &network_dir
+        ).run()?;
+
+        let config = MainReactorConfig::default();
+        let config = toml::to_string_pretty(&config)?;
+        let mut writer = BufWriter::new(File::create(&network_dir.join("config.toml"))?);
+        writer.write_all(config.as_bytes())?;
+        writer.flush()?;
+
+    } else {
+        unreachable!()
+    }
 
     Ok(())
 }
@@ -203,6 +174,25 @@ fn create_validator_account(
         pubkey,
         Motes::new(balance.into()),
         config,
+    ))
+}
+
+/// Create a delegator account and write public and private keys to disk.
+fn create_delegator_account(
+    id: u32,
+    network_asset_dir: &PathBuf,
+    validator_public_key: PublicKey,
+    balance: impl Into<U512>,
+    delegated_amount: impl Into<U512>,
+) -> Result<DelegatorConfig, anyhow::Error> {
+    let path = network_asset_dir.join(format!("delegator-{id}"));
+    let (delegator_public_key, _secret) =
+        generate_keys(&path, if id % 2 == 0 { ED25519 } else { SECP256K1 })?;
+    Ok(DelegatorConfig::new(
+        validator_public_key,
+        delegator_public_key,
+        Motes::new(balance.into()),
+        Motes::new(delegated_amount.into()),
     ))
 }
 
