@@ -1,13 +1,11 @@
 use std::{
     collections::HashMap,
     fs::{self, File},
-    io::{BufReader, BufWriter, Read, Write},
+    io::{BufWriter, Write},
     path::{Path, PathBuf},
-    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use casper_node::{
-    logging::LoggingConfig,
     types::{
         chainspec::{AccountConfig, AccountsConfig, ChainspecRawBytes, ValidatorConfig},
         Chainspec,
@@ -43,25 +41,29 @@ pub struct GenerateNetworkAssets {
     assets_path: PathBuf,
 
     #[structopt(subcommand)]
-    source: AssetSource,
+    source: Generate,
 }
 
 #[derive(StructOpt, Debug)]
-pub enum AssetSource {
-    Generate {
-        validator_count: u32,
-        delegator_count: u32,
-    },
-    Template {
-        template_src_path: PathBuf,
-    },
+pub struct Generate {
+    validator_count: u32,
+    validator_balance: u64,
+    delegator_count: u32,
+    delegator_balance: u64,
 }
 
+#[deprecated]
 pub fn generate_network_assets(
     GenerateNetworkAssets {
         network_name,
         assets_path,
-        source,
+        source:
+            Generate {
+                validator_count,
+                validator_balance,
+                delegator_count,
+                delegator_balance,
+            },
     }: GenerateNetworkAssets,
 ) -> Result<(), anyhow::Error> {
     println!("generating network assets for {network_name}");
@@ -75,15 +77,28 @@ pub fn generate_network_assets(
 
     fs::create_dir_all(&network_dir)?;
 
-    match source {
-        AssetSource::Template { template_src_path } => {
-            generate_assets_from_local_template(&template_src_path, &network_dir, 60)
-        }
-        AssetSource::Generate {
-            validator_count,
-            delegator_count: _,
-        } => generate_assets_with_counts(validator_count, &network_dir),
+    let network_dir = &network_dir;
+    // TODO:
+    // - generate accounts.toml
+    // - generate public+private key pairs
+    // - generate chainspec.toml
+    // - generate config.toml
+    let mut accounts = vec![];
+    for v in 0..validator_count {
+        let validator = create_validator_account(v, network_dir, 12345, 12345)?;
+        accounts.push(validator);
     }
+    let accounts_config = AccountsConfig::new(accounts, vec![]);
+
+    {
+        // Write accounts.toml
+        let accounts = toml::to_string_pretty(&accounts_config)?;
+        let mut writer = BufWriter::new(File::create(&network_dir.join("accounts.toml"))?);
+        writer.write_all(accounts.as_bytes())?;
+        writer.flush()?;
+    }
+
+    Ok(())
 }
 
 fn generate_assets_from_local_template(
@@ -109,7 +124,7 @@ fn generate_assets_from_local_template(
         let mut writer = BufWriter::new(File::create(&target_chainspec_path)?);
         writer.write_all(chainspec_str.as_bytes())?;
         writer.flush()?;
-        let (chainspec, chainspec_raw_bytes) =
+        let (chainspec, _chainspec_raw_bytes) =
             <(Chainspec, ChainspecRawBytes)>::from_path(&assets_target_path)?;
 
         if !chainspec.is_valid() {
@@ -135,17 +150,25 @@ fn generate_assets_from_local_template(
 
     let config_str = fs::read_to_string(&config_toml_path)?;
     let config_table: Value = toml::from_str(&config_str)?;
-    let main_config: MainReactorConfig = config_table.try_into()?;
+    let _main_config: MainReactorConfig = config_table.try_into()?;
 
     Ok(())
 }
 
 fn generate_assets_with_counts(
-    validator_count: u32,
+    Generate {
+        validator_count,
+        validator_balance,
+        delegator_count,
+        delegator_balance,
+    }: Generate,
     network_dir: &PathBuf,
 ) -> Result<(), anyhow::Error> {
-    let faucet = ();
-
+    // TODO:
+    // - generate accounts.toml
+    // - generate public+private key pairs
+    // - generate chainspec.toml
+    // - generate config.toml
     let mut accounts = vec![];
     for v in 0..validator_count {
         let validator = create_validator_account(v, network_dir, 12345, 12345)?;
@@ -153,10 +176,15 @@ fn generate_assets_with_counts(
     }
     let accounts_config = AccountsConfig::new(accounts, vec![]);
 
-    let accounts = dbg!(toml::to_string_pretty(&accounts_config)?);
-    let mut writer = BufWriter::new(File::create(&network_dir.join("accounts.toml"))?);
-    writer.write_all(accounts.as_bytes())?;
-    writer.flush()?;
+    {
+        // Write accounts.toml
+        let accounts = toml::to_string_pretty(&accounts_config)?;
+        let mut writer = BufWriter::new(File::create(&network_dir.join("accounts.toml"))?);
+        writer.write_all(accounts.as_bytes())?;
+        writer.flush()?;
+    }
+
+    {}
 
     Ok(())
 }

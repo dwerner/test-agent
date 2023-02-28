@@ -1,7 +1,6 @@
 // pub use casper_client;
 // pub use casper_node;
 // pub use casper_types;
-pub mod pkg_manager;
 pub mod tls;
 
 use serde::{Deserialize, Serialize};
@@ -32,19 +31,23 @@ use structopt::StructOpt;
 ///     - heaptrack
 /// - deliver artifacts of those actions via a zstd compressed interface
 ///
+/// Prod:
+/// service
+///     casper-node-launcher
+///         casper-node
+/// service
+///     casper-node-launcher
+///         casper-node(versioned) -> wrapper to hook debugging tools
+///
 /// Needless to say, but this service is designed to be used in a debug environment
 #[tarpc::service]
 pub trait AgentService {
-    /// Send a new binary package, unpack, install and start it, then quit the current version.
-    async fn self_update(req: AgentUpdateRequest) -> AgentUpdateResponse;
     /// Push a file to the host running the agent.
     async fn put_file(req: PutFileRequest) -> PutFileResponse;
     /// Fetch a file from the host running the agent.
     async fn fetch_file(req: FetchFileRequest) -> FetchFileResponse;
     /// Stop a service with the given parameters on the host running the agent.
     async fn stop_service(request: StartServiceRequest) -> StartServiceResponse;
-    /// Install a package on the host running the agent using it's package manager.
-    async fn install_package(request: InstallPackageRequest) -> InstallPackageResponse;
     /// Start a service with the given parameters on the host running the agent.
     async fn start_service(request: StartServiceRequest) -> StartServiceResponse;
 }
@@ -62,18 +65,6 @@ pub enum AgentUpdateResponse {
         new_version: u32,
         new_pid: u16,
     },
-}
-
-#[derive(Debug, Serialize, Deserialize, StructOpt)]
-pub struct InstallPackageRequest {
-    pub name: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, StructOpt)]
-pub enum InstallPackageResponse {
-    Success,
-    AlreadyInstalled,
-    Error,
 }
 
 #[derive(Debug, Serialize, Deserialize, StructOpt)]
@@ -140,7 +131,7 @@ impl PutFileRequest {
         target_path: &PathBuf,
     ) -> Result<Self, MessageError> {
         Ok(Self {
-            target_perms: 0,
+            target_perms: 0o666,
             target_path: target_path.clone(),
             file: CompressedWireFile::load_and_compress(src_path, target_path)?,
         })

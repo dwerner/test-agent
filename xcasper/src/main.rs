@@ -5,9 +5,7 @@ mod compile;
 use structopt::StructOpt;
 
 use assets::{generate_network_assets, GenerateNetworkAssets};
-use compile::{
-    checkout_and_compile, compile_all_projects_in_separate_threads, CheckoutAndCompileRustProject,
-};
+use compile::{checkout_and_compile, compile_all_projects, CheckoutAndCompileRustProject};
 
 #[derive(StructOpt, Debug)]
 struct Args {
@@ -33,7 +31,7 @@ impl Command {
         println!("xcasper : {:?}", self);
         match self {
             Command::GenNetwork(generate) => generate_network_assets(generate),
-            Command::CompileAllProjects => compile_all_projects_in_separate_threads(),
+            Command::CompileAllProjects => compile_all_projects(),
             Command::CompileClientWithDefaults => {
                 checkout_and_compile(CheckoutAndCompileRustProject::client_defaults())
             }

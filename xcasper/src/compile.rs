@@ -98,7 +98,7 @@ impl CheckoutAndCompileRustProject {
 }
 
 /// Compile all projects with default settings.
-pub fn compile_all_projects_in_separate_threads() -> Result<(), anyhow::Error> {
+pub fn compile_all_projects() -> Result<(), anyhow::Error> {
     checkout_and_compile(CheckoutAndCompileRustProject::client_defaults())?;
     checkout_and_compile(CheckoutAndCompileRustProject::node_defaults())?;
     // global state update gen is in the node repo, and depends on a checkout
