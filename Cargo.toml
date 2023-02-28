@@ -29,6 +29,7 @@ rocksdb = "0.20.1"
 reqwest = "0.11"
 warp = "0.3"
 structopt = "0.3.26"
+structopt-yaml = "0.4"
 tarpc = { version = "0.31.0", features = ["full"]}
 thiserror = "1"
 tokio = { version = "1", features = ["macros", "net", "rt-multi-thread"] }

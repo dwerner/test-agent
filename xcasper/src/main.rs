@@ -16,12 +16,7 @@ struct Args {
 #[derive(StructOpt, Debug)]
 enum Command {
     GenNetwork(GenerateNetworkAssets),
-    CompileAllProjects,
-    CompileNodeWithDefaults,
-    CompileClientWithDefaults,
-    CompileLauncherWithDefaults,
-    CompileGlobalStateUpdateGenWithDefaults,
-    CompileProject(CheckoutAndCompileRustProject),
+    Compile(Compile),
     StageUpgrade,
     LoadTest,
 }
@@ -31,22 +26,40 @@ impl Command {
         println!("xcasper : {:?}", self);
         match self {
             Command::GenNetwork(generate) => generate_network_assets(generate),
-            Command::CompileAllProjects => compile_all_projects(),
-            Command::CompileClientWithDefaults => {
-                checkout_and_compile(CheckoutAndCompileRustProject::client_defaults())
-            }
-            Command::CompileNodeWithDefaults => {
-                checkout_and_compile(CheckoutAndCompileRustProject::node_defaults())
-            }
-            Command::CompileLauncherWithDefaults => {
-                checkout_and_compile(CheckoutAndCompileRustProject::launcher_defaults())
-            }
-            Command::CompileGlobalStateUpdateGenWithDefaults => checkout_and_compile(
-                CheckoutAndCompileRustProject::global_state_update_gen_defaults(),
-            ),
-            Command::CompileProject(compile) => checkout_and_compile(compile),
+            Command::Compile(compile) => compile.dispatch(),
             Command::StageUpgrade => todo!(),
             Command::LoadTest => todo!(),
+        }
+    }
+}
+
+#[derive(StructOpt, Debug)]
+enum Compile {
+    All,
+    DbUtils,
+    Node,
+    Client,
+    Launcher,
+    GlobalStateUpdateGen,
+}
+
+impl Compile {
+    fn dispatch(self) -> anyhow::Result<()> {
+        match self {
+            Compile::All => compile_all_projects(),
+            Compile::DbUtils => {
+                checkout_and_compile(CheckoutAndCompileRustProject::db_utils_defaults())
+            }
+            Compile::Client => {
+                checkout_and_compile(CheckoutAndCompileRustProject::client_defaults())
+            }
+            Compile::Node => checkout_and_compile(CheckoutAndCompileRustProject::node_defaults()),
+            Compile::Launcher => {
+                checkout_and_compile(CheckoutAndCompileRustProject::launcher_defaults())
+            }
+            Compile::GlobalStateUpdateGen => checkout_and_compile(
+                CheckoutAndCompileRustProject::global_state_update_gen_defaults(),
+            ),
         }
     }
 }
@@ -58,7 +71,9 @@ fn main() -> anyhow::Result<()> {
         Some(command) => {
             command.dispatch()?;
         }
-        _ => {}
+        _ => {
+            println!("no command given")
+        }
     }
     Ok(())
 }

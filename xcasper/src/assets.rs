@@ -11,9 +11,13 @@ use casper_node::{
         },
         Chainspec,
     },
+    utils::External,
     MainReactorConfig,
 };
 
+const ACCOUNTS_TOML: &str = "accounts.toml";
+const CHAINSPEC_TOML: &str = "chainspec.toml";
+const CONFIG_TOML: &str = "config.toml";
 /// Default filename for the PEM-encoded secret key file.
 const SECRET_KEY_PEM: &str = "secret_key.pem";
 /// Default filename for the PEM-encoded public key file.
@@ -26,12 +30,13 @@ const SECP256K1: &str = "secp256k1";
 
 use casper_types::{Motes, PublicKey, SecretKey, U512};
 use const_format::concatcp;
-use duct::cmd;
 use structopt::StructOpt;
 
 use crate::common;
 
 const DEFAULT_ASSETS_PATH: &str = concatcp!(common::BUILD_DIR, "/assets");
+const DEFAULT_CHAINSPEC_SRC_PATH: &str =
+    concatcp!(common::BUILD_DIR, "/casper-node/resources/production/");
 
 #[derive(StructOpt, Debug)]
 pub struct GenerateNetworkAssets {
@@ -39,6 +44,9 @@ pub struct GenerateNetworkAssets {
 
     #[structopt(short, default_value = DEFAULT_ASSETS_PATH)]
     assets_path: PathBuf,
+
+    #[structopt(short, default_value = DEFAULT_CHAINSPEC_SRC_PATH)]
+    chainspec_src_path: PathBuf,
 
     #[structopt(subcommand)]
     source: Params,
@@ -55,30 +63,40 @@ pub enum Params {
         delegated_amount: u64,
     },
     Default,
+    Validators {
+        count: u32,
+    },
 }
 
-impl Default for Params {
-    fn default() -> Self {
+impl Params {
+    fn validator_count(validator_count: u32) -> Self {
         Params::Generate {
-            validator_count: 10,
-            validator_balance: 100_000_000_000,
-            validator_bonded_amount: 100_000_000_000,
-            delegator_count: 100,
-            delegator_balance: 1_000_000,
-            delegated_amount: 500_000,
+            validator_count,
+            validator_balance: 100_000_000_000 * 1_000_000,
+            validator_bonded_amount: 100_000_000_000 * 1_000_000,
+            delegator_count: 10,
+            delegator_balance: 1_000_000 * 1_000_000,
+            delegated_amount: 500_000 * 1_000_000,
         }
     }
 }
 
-#[deprecated]
+impl Default for Params {
+    fn default() -> Self {
+        Self::validator_count(10)
+    }
+}
+
 pub fn generate_network_assets(
     GenerateNetworkAssets {
         network_name,
         assets_path,
+        chainspec_src_path,
         source,
     }: GenerateNetworkAssets,
 ) -> Result<(), anyhow::Error> {
     println!("generating network assets for {network_name}");
+
     let network_dir = assets_path.join(&network_name);
     if network_dir.exists() {
         return Err(anyhow::anyhow!(
@@ -88,9 +106,17 @@ pub fn generate_network_assets(
     }
 
     fs::create_dir_all(&network_dir)?;
+    create_accounts_toml_from_params(source, &network_dir)?;
+    create_chainspec_from_src(&chainspec_src_path, &network_name, &network_dir)?;
+    create_config_from_defaults(&network_dir)?;
 
-    let network_dir = &network_dir;
+    Ok(())
+}
 
+fn create_accounts_toml_from_params(
+    source: Params,
+    network_dir: &PathBuf,
+) -> Result<(), anyhow::Error> {
     if let Params::Generate {
         validator_count,
         validator_balance,
@@ -101,13 +127,8 @@ pub fn generate_network_assets(
     } = match source {
         params @ Params::Generate { .. } => params,
         Params::Default => Params::default(),
+        Params::Validators { count } => Params::validator_count(count),
     } {
-        // TODO:
-        // - generate chainspec.toml
-        // - generate config.toml
-
-        // - generate accounts.toml
-        // - generate public+private key pairs
         let mut accounts = vec![];
         for v in 0..validator_count {
             let validator = create_validator_account(
@@ -137,26 +158,55 @@ pub fn generate_network_assets(
 
         // Write accounts.toml
         let accounts = toml::to_string_pretty(&accounts_config)?;
-        let mut writer = BufWriter::new(File::create(&network_dir.join("accounts.toml"))?);
+        let mut writer = BufWriter::new(File::create(&network_dir.join(ACCOUNTS_TOML))?);
         writer.write_all(accounts.as_bytes())?;
         writer.flush()?;
-
-        cmd!(
-            "cp",
-            "production/chainspec.toml",
-            &network_dir
-        ).run()?;
-
-        let config = MainReactorConfig::default();
-        let config = toml::to_string_pretty(&config)?;
-        let mut writer = BufWriter::new(File::create(&network_dir.join("config.toml"))?);
-        writer.write_all(config.as_bytes())?;
-        writer.flush()?;
-
     } else {
         unreachable!()
     }
+    Ok(())
+}
 
+fn create_config_from_defaults(network_dir: &PathBuf) -> Result<(), anyhow::Error> {
+    let mut config = MainReactorConfig::default();
+    let path = Path::new(SECRET_KEY_PEM);
+    config.consensus.secret_key_path = External::Path(path.to_path_buf());
+    let config = toml::to_string_pretty(&config)?;
+    let mut writer = BufWriter::new(File::create(&network_dir.join(CONFIG_TOML))?);
+    writer.write_all(config.as_bytes())?;
+    writer.flush()?;
+    Ok(())
+}
+
+fn create_chainspec_from_src(
+    chainspec_src_path: &PathBuf,
+    network_name: &str,
+    target_dir: &PathBuf,
+) -> Result<(), anyhow::Error> {
+    use casper_node::utils::Loadable;
+    let (mut chainspec, _chainspec_raw_bytes) =
+        <(Chainspec, ChainspecRawBytes)>::from_path(&chainspec_src_path)?;
+    chainspec.network_config.name = network_name.to_owned();
+    let chainspec = toml::to_string_pretty(&chainspec)?;
+
+    // The node expects an accounts.toml and a chainspec.toml, but the above will add defaults from the node.
+    // The node also can't represent this section being 'undefined' or removed, so the hacky workaround here
+    // is to eliminate the network.accounts_config section manually by removing it from the toml value.
+    let mut chainspec: toml::Value = toml::from_str(&chainspec)?;
+    if let Some(network_section) = chainspec
+        .get_mut("network")
+        .iter_mut()
+        .flat_map(|elem| elem.as_table_mut())
+        .next()
+    {
+        network_section
+            .remove("accounts_config")
+            .expect("should have removed accounts_config section");
+    }
+    let chainspec = toml::to_string_pretty(&chainspec)?;
+    let mut writer = BufWriter::new(File::create(&target_dir.join(CHAINSPEC_TOML))?);
+    writer.write_all(chainspec.as_bytes())?;
+    writer.flush()?;
     Ok(())
 }
 
