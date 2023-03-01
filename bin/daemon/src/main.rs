@@ -103,14 +103,13 @@ impl AgentService for Agent {
             host_src_path,
             filename,
         } = req;
-        let response = match CompressedWireFile::load_and_compress(&host_src_path, &filename) {
+        match CompressedWireFile::load_and_compress(&host_src_path, &filename) {
             Ok(file) => FetchFileResponse::Success { file },
             Err(err) => {
                 println!("err while loading file for fetching {err:?}");
                 FetchFileResponse::Error
             }
-        };
-        response
+        }
     }
 
     async fn stop_service(

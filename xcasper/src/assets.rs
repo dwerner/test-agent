@@ -115,7 +115,7 @@ pub fn generate_network_assets(
 
 fn create_accounts_toml_from_params(
     source: Params,
-    network_dir: &PathBuf,
+    network_dir: &Path,
 ) -> Result<(), anyhow::Error> {
     if let Params::Generate {
         validator_count,
@@ -158,7 +158,7 @@ fn create_accounts_toml_from_params(
 
         // Write accounts.toml
         let accounts = toml::to_string_pretty(&accounts_config)?;
-        let mut writer = BufWriter::new(File::create(&network_dir.join(ACCOUNTS_TOML))?);
+        let mut writer = BufWriter::new(File::create(network_dir.join(ACCOUNTS_TOML))?);
         writer.write_all(accounts.as_bytes())?;
         writer.flush()?;
     } else {
@@ -167,25 +167,25 @@ fn create_accounts_toml_from_params(
     Ok(())
 }
 
-fn create_config_from_defaults(network_dir: &PathBuf) -> Result<(), anyhow::Error> {
+fn create_config_from_defaults(network_dir: &Path) -> Result<(), anyhow::Error> {
     let mut config = MainReactorConfig::default();
     let path = Path::new(SECRET_KEY_PEM);
     config.consensus.secret_key_path = External::Path(path.to_path_buf());
     let config = toml::to_string_pretty(&config)?;
-    let mut writer = BufWriter::new(File::create(&network_dir.join(CONFIG_TOML))?);
+    let mut writer = BufWriter::new(File::create(network_dir.join(CONFIG_TOML))?);
     writer.write_all(config.as_bytes())?;
     writer.flush()?;
     Ok(())
 }
 
 fn create_chainspec_from_src(
-    chainspec_src_path: &PathBuf,
+    chainspec_src_path: &Path,
     network_name: &str,
-    target_dir: &PathBuf,
+    target_dir: &Path,
 ) -> Result<(), anyhow::Error> {
     use casper_node::utils::Loadable;
     let (mut chainspec, _chainspec_raw_bytes) =
-        <(Chainspec, ChainspecRawBytes)>::from_path(&chainspec_src_path)?;
+        <(Chainspec, ChainspecRawBytes)>::from_path(chainspec_src_path)?;
     chainspec.network_config.name = network_name.to_owned();
     let chainspec = toml::to_string_pretty(&chainspec)?;
 
@@ -204,7 +204,7 @@ fn create_chainspec_from_src(
             .expect("should have removed accounts_config section");
     }
     let chainspec = toml::to_string_pretty(&chainspec)?;
-    let mut writer = BufWriter::new(File::create(&target_dir.join(CHAINSPEC_TOML))?);
+    let mut writer = BufWriter::new(File::create(target_dir.join(CHAINSPEC_TOML))?);
     writer.write_all(chainspec.as_bytes())?;
     writer.flush()?;
     Ok(())
@@ -213,7 +213,7 @@ fn create_chainspec_from_src(
 /// Create a validator account and write public and private keys to disk.
 fn create_validator_account(
     id: u32,
-    network_asset_dir: &PathBuf,
+    network_asset_dir: &Path,
     balance: impl Into<U512>,
     bonded_amount: impl Into<U512>,
 ) -> Result<AccountConfig, anyhow::Error> {
@@ -230,7 +230,7 @@ fn create_validator_account(
 /// Create a delegator account and write public and private keys to disk.
 fn create_delegator_account(
     id: u32,
-    network_asset_dir: &PathBuf,
+    network_asset_dir: &Path,
     validator_public_key: PublicKey,
     balance: impl Into<U512>,
     delegated_amount: impl Into<U512>,
@@ -258,14 +258,14 @@ fn generate_keys(
     } else if algorithm.eq_ignore_ascii_case(SECP256K1) {
         SecretKey::generate_secp256k1()?
     } else {
-        return Err(anyhow::anyhow!("unsupported algorithm {}", algorithm).into());
+        return Err(anyhow::anyhow!("unsupported algorithm {}", algorithm));
     };
     let public_key = PublicKey::from(&secret_key);
     let secret_key_path = output_dir.join(SECRET_KEY_PEM);
-    secret_key.to_file(&secret_key_path)?;
+    secret_key.to_file(secret_key_path)?;
 
     let public_key_path = output_dir.join(PUBLIC_KEY_PEM);
-    public_key.to_file(&public_key_path)?;
+    public_key.to_file(public_key_path)?;
 
     Ok((public_key, secret_key))
 }

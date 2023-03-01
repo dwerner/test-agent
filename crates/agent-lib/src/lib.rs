@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     fs::{self, File},
     io::{BufReader, BufWriter, Cursor, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 use structopt::StructOpt;
 
@@ -127,12 +127,12 @@ pub struct PutFileRequest {
 impl PutFileRequest {
     /// Loads a file at the given src_path, compresses it's contents using zstd and creates a message containing the compressed data.
     pub fn new_with_default_perms(
-        src_path: &PathBuf,
-        target_path: &PathBuf,
+        src_path: &Path,
+        target_path: &Path,
     ) -> Result<Self, MessageError> {
         Ok(Self {
             target_perms: 0o666,
-            target_path: target_path.clone(),
+            target_path: target_path.to_path_buf(),
             file: CompressedWireFile::load_and_compress(src_path, target_path)?,
         })
     }
@@ -151,19 +151,16 @@ pub struct CompressedWireFile {
 }
 
 impl CompressedWireFile {
-    pub fn load_and_compress(
-        src_path: &PathBuf,
-        target_path: &PathBuf,
-    ) -> Result<Self, MessageError> {
+    pub fn load_and_compress(src_path: &Path, target_path: &Path) -> Result<Self, MessageError> {
         let file = File::open(src_path).map_err(|err| MessageError::OpenFile {
-            path: src_path.clone(),
+            path: src_path.to_path_buf(),
             err,
         })?;
         let filename = file_name_from_path(target_path)?;
         let reader = BufReader::new(file);
         let zstd_compressed_data =
             zstd::encode_all(reader, 3).map_err(|err| MessageError::Compress {
-                path: src_path.clone(),
+                path: src_path.to_path_buf(),
                 err,
             })?;
         Ok(CompressedWireFile {
@@ -193,11 +190,10 @@ impl CompressedWireFile {
     }
 }
 
-pub fn file_name_from_path(target_path: &PathBuf) -> Result<String, MessageError> {
+pub fn file_name_from_path(target_path: &Path) -> Result<String, MessageError> {
     let filename = target_path
         .file_name()
-        .map(|os_str| os_str.to_str())
-        .flatten()
+        .and_then(|os_str| os_str.to_str())
         .ok_or_else(|| MessageError::NoFileName)?
         .to_string();
     Ok(filename)

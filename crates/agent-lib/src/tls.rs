@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::task::Waker;
 use std::{
@@ -144,6 +144,7 @@ where
 }
 
 /// A [`TcpListener`] that wraps connections in [transports](Transport).
+#[allow(clippy::type_complexity)]
 #[pin_project]
 pub struct TlsIncoming<Item, SinkItem, Codec, CodecFn> {
     acceptor: TlsAcceptor,
@@ -193,23 +194,21 @@ where
                 let waker = cx.waker().clone();
                 waker.wake_by_ref();
                 self.waker = Some(waker);
-                return Poll::Pending;
+                Poll::Pending
             }
             Some(mut accept) => match Pin::new(&mut accept).poll(cx) {
                 Poll::Ready(tls) => {
                     self.waker.take();
                     self.accept.take();
                     match tls {
-                        Ok(tls) => {
-                            return Poll::Ready(Some(Ok(new(
-                                self.config.new_framed(tls),
-                                (self.codec_fn)(),
-                            ))))
-                        }
-                        Err(err) => return Poll::Ready(Some(Err(err))),
+                        Ok(tls) => Poll::Ready(Some(Ok(new(
+                            self.config.new_framed(tls),
+                            (self.codec_fn)(),
+                        )))),
+                        Err(err) => Poll::Ready(Some(Err(err))),
                     }
                 }
-                Poll::Pending => return Poll::Pending,
+                Poll::Pending => Poll::Pending,
             },
         }
     }
@@ -245,13 +244,13 @@ where
 
 pub async fn connect(
     addr: &SocketAddr,
-    cert_file: &PathBuf,
-    key_file: &PathBuf,
+    cert_file: &Path,
+    key_file: &Path,
 ) -> Result<client::TlsStream<TcpStream>, anyhow::Error> {
     let mut roots = rustls::RootCertStore::empty();
 
     // only valid for self signed certs, which is what we have.
-    let end_entity = load_cert(&cert_file)?;
+    let end_entity = load_cert(cert_file)?;
     let key = load_key(key_file)?;
 
     roots.add(&end_entity)?;
@@ -271,7 +270,7 @@ pub async fn connect(
         .await?)
 }
 
-fn load_key(key_file: &PathBuf) -> Result<rustls::PrivateKey, anyhow::Error> {
+fn load_key(key_file: &Path) -> Result<rustls::PrivateKey, anyhow::Error> {
     let mut reader = BufReader::new(File::open(key_file)?);
     Ok(rustls::PrivateKey(
         match rustls_pemfile::read_one(&mut reader)? {
@@ -281,7 +280,7 @@ fn load_key(key_file: &PathBuf) -> Result<rustls::PrivateKey, anyhow::Error> {
     ))
 }
 
-fn load_cert(cert_file: &PathBuf) -> Result<rustls::Certificate, anyhow::Error> {
+fn load_cert(cert_file: &Path) -> Result<rustls::Certificate, anyhow::Error> {
     let mut reader = BufReader::new(File::open(cert_file)?);
     let certs = rustls_pemfile::certs(&mut reader)?;
     if certs.is_empty() {
@@ -308,8 +307,8 @@ impl ServerCertVerifier for SelfSignedCertResolver {
             println!("accepting self-signed cert");
             return Ok(rustls::client::ServerCertVerified::assertion());
         }
-        return Err(rustls::Error::General(
+        Err(rustls::Error::General(
             "we accept only matching self-signed certs".into(),
-        ));
+        ))
     }
 }
