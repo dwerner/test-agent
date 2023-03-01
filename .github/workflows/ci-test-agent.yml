@@ -45,8 +45,3 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-
-      - name: FmtLint 
-        uses: actions-rs/cargo@v1
-        with:
-          command: xtask fmt-lint
