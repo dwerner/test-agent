@@ -8,6 +8,8 @@ casper-node = { workspace = true }
 casper-types = { workspace = true }
 
 const_format = { workspace = true }
+envsubst = { workspace = true }
 anyhow = { workspace = true }
 duct = { workspace = true }
 structopt = { workspace = true }
+toml = { workspace = true }

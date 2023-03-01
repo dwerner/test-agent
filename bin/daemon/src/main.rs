@@ -1,9 +1,8 @@
-use std::{io::BufRead, net::SocketAddr, path::PathBuf};
+use std::{net::SocketAddr, path::PathBuf};
 
 use agent_lib::{
-    pkg_manager, tls, AgentService, AgentUpdateRequest, AgentUpdateResponse, CompressedWireFile,
-    FetchFileRequest, FetchFileResponse, InstallPackageRequest, InstallPackageResponse,
-    PutFileRequest, PutFileResponse, StartServiceRequest, StartServiceResponse,
+    tls, AgentService, CompressedWireFile, FetchFileRequest, FetchFileResponse, PutFileRequest,
+    PutFileResponse, StartServiceRequest, StartServiceResponse,
 };
 use futures::{future, StreamExt};
 use structopt::StructOpt;
@@ -79,10 +78,6 @@ impl Agent {
 
 #[tarpc::server]
 impl AgentService for Agent {
-    /// Send a new binary package, unpack, install and start it, then quit the current version.
-    async fn self_update(self, _cx: Context, _req: AgentUpdateRequest) -> AgentUpdateResponse {
-        todo!()
-    }
     async fn put_file(self, _ctx: Context, req: PutFileRequest) -> PutFileResponse {
         let PutFileRequest {
             target_path,
@@ -108,15 +103,15 @@ impl AgentService for Agent {
             host_src_path,
             filename,
         } = req;
-        let response = match CompressedWireFile::load_and_compress(&host_src_path, &filename) {
+        match CompressedWireFile::load_and_compress(&host_src_path, &filename) {
             Ok(file) => FetchFileResponse::Success { file },
             Err(err) => {
                 println!("err while loading file for fetching {err:?}");
                 FetchFileResponse::Error
             }
-        };
-        response
+        }
     }
+
     async fn stop_service(
         self,
         _ctx: Context,
@@ -134,30 +129,5 @@ impl AgentService for Agent {
             println!("did some work {i}");
         }
         StartServiceResponse::Error
-    }
-
-    async fn install_package(
-        self,
-        _: Context,
-        request: agent_lib::InstallPackageRequest,
-    ) -> InstallPackageResponse {
-        let InstallPackageRequest { name: pkg_name } = request;
-        let mut mgr = pkg_manager::PkgWrapper::new(true).expect("unable to detect package manager");
-        if !mgr.is_installed(&pkg_name) {
-            println!("package {pkg_name} not found, installing");
-            match mgr.install_pkg(&pkg_name) {
-                Ok(reader) => {
-                    for line in reader.lines() {
-                        println!("child process output: {}", line.unwrap());
-                    }
-                    println!("successfully installed package {pkg_name}");
-                    return InstallPackageResponse::Success;
-                }
-                _ => return InstallPackageResponse::Error,
-            }
-        } else {
-            println!("package {pkg_name} already installed");
-            return InstallPackageResponse::AlreadyInstalled;
-        }
     }
 }

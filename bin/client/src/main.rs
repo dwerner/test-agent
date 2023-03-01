@@ -2,7 +2,7 @@ use std::{fs, net::SocketAddr, path::PathBuf};
 
 use agent_lib::{
     file_name_from_path, tls, AgentServiceClient, FetchFileRequest, FetchFileResponse,
-    InstallPackageRequest, PutFileRequest, StartServiceRequest, StopServiceRequest,
+    PutFileRequest, StartServiceRequest, StopServiceRequest,
 };
 use structopt::StructOpt;
 use tarpc::{client, context, tokio_serde::formats::Bincode};
@@ -25,7 +25,6 @@ enum Rpc {
     StopService(StopServiceRequest),
     FetchFile(FetchFileRequest),
     PutFile(PutFile),
-    InstallPackage(InstallPackageRequest),
 }
 
 #[derive(Debug, StructOpt)]
@@ -72,10 +71,6 @@ async fn main() -> anyhow::Result<()> {
         Rpc::StartService(start) => {
             let response = client.start_service(context::current(), start).await?;
             println!("called start and got response {response:?}");
-        }
-        Rpc::InstallPackage(install) => {
-            let response = client.install_package(context::current(), install).await?;
-            println!("called install package and got response {response:?}");
         }
     }
     Ok(())

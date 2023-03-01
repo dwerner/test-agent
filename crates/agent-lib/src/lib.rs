@@ -1,14 +1,13 @@
 // pub use casper_client;
 // pub use casper_node;
 // pub use casper_types;
-pub mod pkg_manager;
 pub mod tls;
 
 use serde::{Deserialize, Serialize};
 use std::{
     fs::{self, File},
     io::{BufReader, BufWriter, Cursor, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 use structopt::StructOpt;
 
@@ -32,19 +31,23 @@ use structopt::StructOpt;
 ///     - heaptrack
 /// - deliver artifacts of those actions via a zstd compressed interface
 ///
+/// Prod:
+/// service
+///     casper-node-launcher
+///         casper-node
+/// service
+///     casper-node-launcher
+///         casper-node(versioned) -> wrapper to hook debugging tools
+///
 /// Needless to say, but this service is designed to be used in a debug environment
 #[tarpc::service]
 pub trait AgentService {
-    /// Send a new binary package, unpack, install and start it, then quit the current version.
-    async fn self_update(req: AgentUpdateRequest) -> AgentUpdateResponse;
     /// Push a file to the host running the agent.
     async fn put_file(req: PutFileRequest) -> PutFileResponse;
     /// Fetch a file from the host running the agent.
     async fn fetch_file(req: FetchFileRequest) -> FetchFileResponse;
     /// Stop a service with the given parameters on the host running the agent.
     async fn stop_service(request: StartServiceRequest) -> StartServiceResponse;
-    /// Install a package on the host running the agent using it's package manager.
-    async fn install_package(request: InstallPackageRequest) -> InstallPackageResponse;
     /// Start a service with the given parameters on the host running the agent.
     async fn start_service(request: StartServiceRequest) -> StartServiceResponse;
 }
@@ -62,18 +65,6 @@ pub enum AgentUpdateResponse {
         new_version: u32,
         new_pid: u16,
     },
-}
-
-#[derive(Debug, Serialize, Deserialize, StructOpt)]
-pub struct InstallPackageRequest {
-    pub name: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, StructOpt)]
-pub enum InstallPackageResponse {
-    Success,
-    AlreadyInstalled,
-    Error,
 }
 
 #[derive(Debug, Serialize, Deserialize, StructOpt)]
@@ -136,12 +127,12 @@ pub struct PutFileRequest {
 impl PutFileRequest {
     /// Loads a file at the given src_path, compresses it's contents using zstd and creates a message containing the compressed data.
     pub fn new_with_default_perms(
-        src_path: &PathBuf,
-        target_path: &PathBuf,
+        src_path: &Path,
+        target_path: &Path,
     ) -> Result<Self, MessageError> {
         Ok(Self {
-            target_perms: 0,
-            target_path: target_path.clone(),
+            target_perms: 0o666,
+            target_path: target_path.to_path_buf(),
             file: CompressedWireFile::load_and_compress(src_path, target_path)?,
         })
     }
@@ -160,19 +151,16 @@ pub struct CompressedWireFile {
 }
 
 impl CompressedWireFile {
-    pub fn load_and_compress(
-        src_path: &PathBuf,
-        target_path: &PathBuf,
-    ) -> Result<Self, MessageError> {
+    pub fn load_and_compress(src_path: &Path, target_path: &Path) -> Result<Self, MessageError> {
         let file = File::open(src_path).map_err(|err| MessageError::OpenFile {
-            path: src_path.clone(),
+            path: src_path.to_path_buf(),
             err,
         })?;
         let filename = file_name_from_path(target_path)?;
         let reader = BufReader::new(file);
         let zstd_compressed_data =
             zstd::encode_all(reader, 3).map_err(|err| MessageError::Compress {
-                path: src_path.clone(),
+                path: src_path.to_path_buf(),
                 err,
             })?;
         Ok(CompressedWireFile {
@@ -202,11 +190,10 @@ impl CompressedWireFile {
     }
 }
 
-pub fn file_name_from_path(target_path: &PathBuf) -> Result<String, MessageError> {
+pub fn file_name_from_path(target_path: &Path) -> Result<String, MessageError> {
     let filename = target_path
         .file_name()
-        .map(|os_str| os_str.to_str())
-        .flatten()
+        .and_then(|os_str| os_str.to_str())
         .ok_or_else(|| MessageError::NoFileName)?
         .to_string();
     Ok(filename)
@@ -215,7 +202,5 @@ pub fn file_name_from_path(target_path: &PathBuf) -> Result<String, MessageError
 #[cfg(test)]
 mod tests {
     #[test]
-    fn round_trip_compress_decompress() {
-        todo!()
-    }
+    fn round_trip_compress_decompress() {}
 }

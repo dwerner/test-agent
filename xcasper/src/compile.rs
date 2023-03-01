@@ -13,6 +13,7 @@ const DEFAULT_REMOTE: &str = "origin";
 
 const CASPER_NODE_GIT_REPO: &str = "https://github.com/casper-network/casper-node";
 const CASPER_CLIENT_GIT_REPO: &str = "https://github.com/casper-ecosystem/casper-client-rs";
+const CASPER_DB_UTILS_REPO: &str = "https://github.com/casper-network/casper-db-utils";
 const CASPER_LAUNCHER_GIT_REPO: &str = "https://github.com/casper-network/casper-node-launcher";
 
 #[derive(StructOpt, Debug)]
@@ -47,6 +48,17 @@ pub struct CheckoutAndCompileRustProject {
 }
 
 impl CheckoutAndCompileRustProject {
+    pub(crate) fn db_utils_defaults() -> Self {
+        Self {
+            debug: false,
+            git_url: CASPER_DB_UTILS_REPO.into(),
+            branch: "master".into(),
+            remote: DEFAULT_REMOTE.into(),
+            base_path: BUILD_DIR.into(),
+            local_name: "casper-db-utils".into(),
+            package_name: None,
+        }
+    }
     /// Defaults for compiling the dev branch of the node repo.
     pub(crate) fn client_defaults() -> Self {
         Self {
@@ -88,7 +100,7 @@ impl CheckoutAndCompileRustProject {
         Self {
             debug: false,
             git_url: CASPER_LAUNCHER_GIT_REPO.into(),
-            branch: "master".into(),
+            branch: "main".into(),
             remote: DEFAULT_REMOTE.into(),
             base_path: BUILD_DIR.into(),
             local_name: "casper-node-launcher".into(),
@@ -98,7 +110,8 @@ impl CheckoutAndCompileRustProject {
 }
 
 /// Compile all projects with default settings.
-pub fn compile_all_projects_in_separate_threads() -> Result<(), anyhow::Error> {
+pub fn compile_all_projects() -> Result<(), anyhow::Error> {
+    checkout_and_compile(CheckoutAndCompileRustProject::db_utils_defaults())?;
     checkout_and_compile(CheckoutAndCompileRustProject::client_defaults())?;
     checkout_and_compile(CheckoutAndCompileRustProject::node_defaults())?;
     // global state update gen is in the node repo, and depends on a checkout
