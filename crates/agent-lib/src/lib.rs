@@ -202,7 +202,5 @@ pub fn file_name_from_path(target_path: &Path) -> Result<String, MessageError> {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn round_trip_compress_decompress() {
-        assert!(true, "always passes!");
-    }
+    fn round_trip_compress_decompress() {}
 }
