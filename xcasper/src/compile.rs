@@ -17,11 +17,7 @@ const CASPER_DB_UTILS_REPO: &str = "https://github.com/casper-network/casper-db-
 const CASPER_LAUNCHER_GIT_REPO: &str = "https://github.com/casper-network/casper-node-launcher";
 
 #[derive(StructOpt, Debug)]
-pub struct CheckoutAndCompileRustProject {
-    /// Compile as debug (--release or not)
-    #[structopt(short, long)]
-    pub debug: bool,
-
+pub struct CheckoutGitRepo {
     /// Git uri (http or git) to use for checkout
     #[structopt(short, long)]
     pub git_url: String,
@@ -40,130 +36,157 @@ pub struct CheckoutAndCompileRustProject {
 
     /// Name for the local checkout
     #[structopt(short, long)]
-    pub local_name: String,
+    pub local_checkout_name: String,
 
-    /// Name of the package to build - will use local_name if None.
+    /// Should the checkout be updated from the remote
     #[structopt(short, long)]
-    pub package_name: Option<String>,
+    pub update_from_remote: bool,
 }
 
-impl CheckoutAndCompileRustProject {
+impl CheckoutGitRepo {
+    /// Defaults for compiling the dev branch of the casper-db-utils repo.
     pub(crate) fn db_utils_defaults() -> Self {
         Self {
-            debug: false,
             git_url: CASPER_DB_UTILS_REPO.into(),
             branch: "master".into(),
             remote: DEFAULT_REMOTE.into(),
             base_path: BUILD_DIR.into(),
-            local_name: "casper-db-utils".into(),
-            package_name: None,
+            local_checkout_name: "casper-db-utils".into(),
+            update_from_remote: false,
         }
     }
+
     /// Defaults for compiling the dev branch of the node repo.
     pub(crate) fn client_defaults() -> Self {
         Self {
-            debug: false,
             git_url: CASPER_CLIENT_GIT_REPO.into(),
             branch: "main".into(),
             remote: DEFAULT_REMOTE.into(),
             base_path: BUILD_DIR.into(),
-            local_name: "casper-client".into(),
-            package_name: None,
+            local_checkout_name: "casper-client".into(),
+            update_from_remote: false,
         }
     }
     /// Defaults for compiling the dev branch of the node repo.
     pub(crate) fn node_defaults() -> Self {
         Self {
-            debug: false,
             git_url: CASPER_NODE_GIT_REPO.into(),
             branch: DEFAULT_BRANCH.into(),
             remote: DEFAULT_REMOTE.into(),
             base_path: BUILD_DIR.into(),
-            local_name: "casper-node".into(),
-            package_name: None,
+            local_checkout_name: "casper-node".into(),
+            update_from_remote: false,
         }
     }
     /// Defaults for compiling the dev branch of the global-state-update-gen tool.
     pub(crate) fn global_state_update_gen_defaults() -> Self {
         Self {
-            debug: false,
             git_url: CASPER_NODE_GIT_REPO.into(),
             branch: DEFAULT_BRANCH.into(),
             remote: DEFAULT_REMOTE.into(),
             base_path: BUILD_DIR.into(),
-            local_name: "casper-node".into(),
-            package_name: Some("global-state-update-gen".into()),
+            local_checkout_name: "casper-node".into(),
+            update_from_remote: false,
         }
     }
     /// Defaults for compiling the dev branch of the launcher repo.
     pub(crate) fn launcher_defaults() -> Self {
         Self {
-            debug: false,
             git_url: CASPER_LAUNCHER_GIT_REPO.into(),
             branch: "main".into(),
             remote: DEFAULT_REMOTE.into(),
             base_path: BUILD_DIR.into(),
-            local_name: "casper-node-launcher".into(),
-            package_name: None,
+            local_checkout_name: "casper-node-launcher".into(),
+            update_from_remote: false,
         }
     }
+
+    // (Optionally) git checkout and compile project
+    // Not thread safe as we change dirs
+    pub fn dispatch(self) -> Result<PathBuf, anyhow::Error> {
+        let target_path: &Path = &self.base_path.join(&self.local_checkout_name);
+        println!("checking for local checkout");
+        if !Path::new(&target_path).exists() {
+            println!("checking out repo in {}", target_path.display());
+            cmd!("git", "clone", self.git_url, &target_path).run()?;
+        } else {
+            println!("found checkout in {}", target_path.display());
+        }
+        let starting_dir = std::env::current_dir()?;
+        env::set_current_dir(&target_path)?;
+        println!("updating repo - fetching remote: {}", self.remote);
+        cmd!("git", "fetch", &self.remote).run()?;
+        println!(
+            "checking out target branch {} in {}",
+            self.remote,
+            target_path.display()
+        );
+        cmd!("git", "checkout", &self.branch).run()?;
+        if self.update_from_remote {
+            cmd!("git", "pull", &self.remote, &self.branch).run()?;
+        }
+        env::set_current_dir(starting_dir)?;
+        Ok(target_path.to_path_buf())
+    }
 }
 
-/// Compile all projects with default settings.
-pub fn compile_all_projects() -> Result<(), anyhow::Error> {
-    checkout_and_compile(CheckoutAndCompileRustProject::db_utils_defaults())?;
-    checkout_and_compile(CheckoutAndCompileRustProject::client_defaults())?;
-    checkout_and_compile(CheckoutAndCompileRustProject::node_defaults())?;
-    // global state update gen is in the node repo, and depends on a checkout
-    checkout_and_compile(CheckoutAndCompileRustProject::global_state_update_gen_defaults())?;
-    checkout_and_compile(CheckoutAndCompileRustProject::launcher_defaults())?;
-    Ok(())
+#[derive(StructOpt, Debug)]
+pub struct CompileRustProject {
+    /// Compile as debug (--release or not)
+    #[structopt(short, long)]
+    pub debug: bool,
+
+    /// Package name to compile.
+    #[structopt(short, long)]
+    pub package_name: String,
+
+    /// Target path.
+    #[structopt(short, long)]
+    pub target_path: PathBuf,
 }
 
-// (Optionally) git checkout and compile project
-// Not thread safe as we change dirs
-pub fn checkout_and_compile(
-    CheckoutAndCompileRustProject {
-        debug,
-        git_url,
-        branch,
-        remote,
-        base_path,
-        local_name,
-        package_name,
-    }: CheckoutAndCompileRustProject,
-) -> Result<(), anyhow::Error> {
-    let target_path = base_path.join(&local_name);
-    println!("checking for local checkout");
-    if !Path::new(&target_path).exists() {
-        println!("checking out repo in {}", target_path.display());
-        cmd!("git", "clone", git_url, &target_path).run()?;
-    } else {
-        println!("found checkout in {}", target_path.display());
+impl CompileRustProject {
+    pub fn new(target_path: PathBuf, package_name: &str) -> Self {
+        Self {
+            debug: false,
+            package_name: package_name.into(),
+            target_path,
+        }
     }
 
-    // TODO: injection of rustflags, capture of output
-    println!("compiling project {local_name} {package_name:?}");
-
-    let starting_dir = std::env::current_dir()?;
-    env::set_current_dir(&target_path)?;
-
-    // fetching and switching branches supports an existing checkout
-    println!("updating repo - fetching remote: {remote}");
-    cmd!("git", "fetch", remote).run()?;
-
-    println!(
-        "checking out target branch {branch} in {}",
-        target_path.display()
-    );
-    cmd!("git", "checkout", branch).run()?;
-
-    let pkg = package_name.unwrap_or(local_name);
-    if debug {
-        cmd!("cargo", "build", "--package", pkg).run()?;
-    } else {
-        cmd!("cargo", "build", "--package", pkg, "--release").run()?;
+    pub fn package(pkg: &str) -> impl FnOnce(Self) -> Self {
+        let pkg = pkg.to_owned();
+        move |proj| Self {
+            package_name: pkg,
+            ..proj
+        }
     }
-    env::set_current_dir(starting_dir)?;
-    Ok(())
+
+    pub fn debug() -> impl FnOnce(Self) -> Self {
+        move |proj| Self {
+            debug: true,
+            ..proj
+        }
+    }
+
+    pub fn dispatch(self) -> Result<PathBuf, anyhow::Error> {
+        println!(
+            "compiling project at {:?} {:?}",
+            self.target_path, self.package_name
+        );
+        let starting_dir = std::env::current_dir()?;
+        env::set_current_dir(&self.target_path)?;
+        let package_name = self.package_name;
+        if self.debug {
+            cmd!("cargo", "build", "--package", &package_name).run()?;
+        } else {
+            cmd!("cargo", "build", "--package", &package_name, "--release").run()?;
+        }
+        env::set_current_dir(starting_dir)?;
+        Ok(self
+            .target_path
+            .join("target")
+            .join(if self.debug { "debug" } else { "release" })
+            .join(package_name))
+    }
 }

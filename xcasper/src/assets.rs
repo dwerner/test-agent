@@ -1,7 +1,9 @@
 use std::{
+    fmt::{Display, Formatter},
     fs::{self, File},
     io::{BufWriter, Write},
     path::{Path, PathBuf},
+    str::FromStr,
 };
 
 use casper_node::{
@@ -28,7 +30,7 @@ const ED25519: &str = "Ed25519";
 /// Name of secp256k1 algorithm.
 const SECP256K1: &str = "secp256k1";
 
-use casper_types::{Motes, PublicKey, SecretKey, U512};
+use casper_types::{Motes, ProtocolVersion, PublicKey, SecretKey, U512};
 use const_format::concatcp;
 use structopt::StructOpt;
 
@@ -40,32 +42,89 @@ const DEFAULT_CHAINSPEC_SRC_PATH: &str =
 
 #[derive(StructOpt, Debug)]
 pub struct GenerateNetworkAssets {
+    /// Name of the network
     network_name: String,
 
+    /// Version of the staged network
+    #[structopt(short, long, parse(try_from_str = Version::from_str), default_value = "1.0.0")]
+    version: Version,
+
+    /// Path to the assets directory
     #[structopt(short, default_value = DEFAULT_ASSETS_PATH)]
     assets_path: PathBuf,
 
+    /// Path to the chainspec source directory
     #[structopt(short, default_value = DEFAULT_CHAINSPEC_SRC_PATH)]
     chainspec_src_path: PathBuf,
 
+    /// Path to the chainspec source directory
     #[structopt(subcommand)]
     source: Params,
+
+    /// Overwrite existing files
+    #[structopt(short, long)]
+    overwrite: bool,
+}
+
+#[derive(StructOpt, Debug)]
+pub struct Version {
+    pub major: u32,
+    pub minor: u32,
+    pub patch: u32,
+}
+
+impl FromStr for Version {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut parts = s.split('.');
+        let major = parts
+            .next()
+            .ok_or_else(|| anyhow::anyhow!("Missing major version"))?
+            .parse::<u32>()?;
+        let minor = parts
+            .next()
+            .ok_or_else(|| anyhow::anyhow!("Missing minor version"))?
+            .parse::<u32>()?;
+        let patch = parts
+            .next()
+            .ok_or_else(|| anyhow::anyhow!("Missing patch version"))?
+            .parse::<u32>()?;
+        Ok(Version {
+            major,
+            minor,
+            patch,
+        })
+    }
+}
+
+impl Display for Version {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}.{}.{}", self.major, self.minor, self.patch)
+    }
 }
 
 #[derive(StructOpt, Debug)]
 pub enum Params {
+    /// Generate a chainspec from scratch, specifying all parameters
     Generate {
+        /// Number of validators to generate
         validator_count: u32,
+        /// Balance for each validator
         validator_balance: u64,
+        /// Bonded amount for each validator
         validator_bonded_amount: u64,
+        /// Number of delegators to generate
         delegator_count: u32,
+        /// Balance for each delegator
         delegator_balance: u64,
+        /// Delegated amount for each delegator
         delegated_amount: u64,
     },
+    /// Use the default values
     Default,
-    Validators {
-        count: u32,
-    },
+    /// Use the default values, but override the number of validators
+    Validators { count: u32 },
 }
 
 impl Params {
@@ -87,32 +146,56 @@ impl Default for Params {
     }
 }
 
+/// Generate assets for a given network.
+/// This includes:
+/// - accounts.toml
+/// - chainspec.toml
+/// - config.toml
+/// - validator keys
+/// - delegator keys
 pub fn generate_network_assets(
     GenerateNetworkAssets {
         network_name,
         assets_path,
         chainspec_src_path,
         source,
+        overwrite,
+        version,
     }: GenerateNetworkAssets,
-) -> Result<(), anyhow::Error> {
-    println!("generating network assets for {network_name}");
+) -> Result<PathBuf, anyhow::Error> {
+    println!(
+        "Generating network assets for network '{}' version '{}'...",
+        network_name, version,
+    );
+    let network_dir = assets_path.join(&network_name).join(format!(
+        "{}_{}_{}",
+        version.major, version.minor, version.patch
+    ));
 
-    let network_dir = assets_path.join(&network_name);
     if network_dir.exists() {
-        return Err(anyhow::anyhow!(
-            "network dir already exists at {}",
-            network_dir.display()
-        ));
+        if overwrite {
+            fs::remove_dir_all(&network_dir)?;
+        } else {
+            return Err(anyhow::anyhow!(
+                "network dir already exists at {}",
+                network_dir.display()
+            ));
+        }
     }
 
     fs::create_dir_all(&network_dir)?;
+
+    // shared directory containing files that are shared between nodes
+    fs::create_dir_all(network_dir.join("shared"))?;
+
     create_accounts_toml_from_params(source, &network_dir)?;
-    create_chainspec_from_src(&chainspec_src_path, &network_name, &network_dir)?;
+    create_chainspec_from_src(&chainspec_src_path, &network_name, &network_dir, version)?;
     create_config_from_defaults(&network_dir)?;
 
-    Ok(())
+    Ok(network_dir)
 }
 
+/// Create accounts.toml from the given parameters
 fn create_accounts_toml_from_params(
     source: Params,
     network_dir: &Path,
@@ -158,7 +241,9 @@ fn create_accounts_toml_from_params(
 
         // Write accounts.toml
         let accounts = toml::to_string_pretty(&accounts_config)?;
-        let mut writer = BufWriter::new(File::create(network_dir.join(ACCOUNTS_TOML))?);
+        let mut writer = BufWriter::new(File::create(
+            network_dir.join("shared").join(ACCOUNTS_TOML),
+        )?);
         writer.write_all(accounts.as_bytes())?;
         writer.flush()?;
     } else {
@@ -172,7 +257,7 @@ fn create_config_from_defaults(network_dir: &Path) -> Result<(), anyhow::Error> 
     let path = Path::new(SECRET_KEY_PEM);
     config.consensus.secret_key_path = External::Path(path.to_path_buf());
     let config = toml::to_string_pretty(&config)?;
-    let mut writer = BufWriter::new(File::create(network_dir.join(CONFIG_TOML))?);
+    let mut writer = BufWriter::new(File::create(network_dir.join("shared").join(CONFIG_TOML))?);
     writer.write_all(config.as_bytes())?;
     writer.flush()?;
     Ok(())
@@ -182,11 +267,14 @@ fn create_chainspec_from_src(
     chainspec_src_path: &Path,
     network_name: &str,
     target_dir: &Path,
+    version: Version,
 ) -> Result<(), anyhow::Error> {
     use casper_node::utils::Loadable;
     let (mut chainspec, _chainspec_raw_bytes) =
         <(Chainspec, ChainspecRawBytes)>::from_path(chainspec_src_path)?;
     chainspec.network_config.name = network_name.to_owned();
+    chainspec.protocol_config.version =
+        ProtocolVersion::from_parts(version.major, version.minor, version.patch);
     let chainspec = toml::to_string_pretty(&chainspec)?;
 
     // The node expects an accounts.toml and a chainspec.toml, but the above will add defaults from the node.
@@ -203,8 +291,11 @@ fn create_chainspec_from_src(
             .remove("accounts_config")
             .expect("should have removed accounts_config section");
     }
+
     let chainspec = toml::to_string_pretty(&chainspec)?;
-    let mut writer = BufWriter::new(File::create(target_dir.join(CHAINSPEC_TOML))?);
+    let mut writer = BufWriter::new(File::create(
+        target_dir.join("shared").join(CHAINSPEC_TOML),
+    )?);
     writer.write_all(chainspec.as_bytes())?;
     writer.flush()?;
     Ok(())

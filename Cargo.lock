@@ -296,6 +296,7 @@ checksum = "89b2fd2a0dcf38d7971e2194b6b6eebab45ae01067456a7fd93d5547a61b70be"
 [[package]]
 name = "casper-execution-engine"
 version = "2.0.1"
+source = "git+https://github.com/dwerner/casper-node?branch=pub-config-fields-2#8aacfd30a266a88f0b48ee13e67e06cf93512f18"
 dependencies = [
  "anyhow",
  "base16",
@@ -336,6 +337,7 @@ dependencies = [
 [[package]]
 name = "casper-hashing"
 version = "1.4.3"
+source = "git+https://github.com/dwerner/casper-node?branch=pub-config-fields-2#8aacfd30a266a88f0b48ee13e67e06cf93512f18"
 dependencies = [
  "base16",
  "blake2",
@@ -354,6 +356,7 @@ dependencies = [
 [[package]]
 name = "casper-json-rpc"
 version = "0.1.0"
+source = "git+https://github.com/dwerner/casper-node?branch=pub-config-fields-2#8aacfd30a266a88f0b48ee13e67e06cf93512f18"
 dependencies = [
  "bytes",
  "futures",
@@ -368,6 +371,7 @@ dependencies = [
 [[package]]
 name = "casper-node"
 version = "1.4.8"
+source = "git+https://github.com/dwerner/casper-node?branch=pub-config-fields-2#8aacfd30a266a88f0b48ee13e67e06cf93512f18"
 dependencies = [
  "ansi_term",
  "anyhow",
@@ -452,6 +456,7 @@ dependencies = [
 [[package]]
 name = "casper-types"
 version = "1.5.0"
+source = "git+https://github.com/dwerner/casper-node?branch=pub-config-fields-2#8aacfd30a266a88f0b48ee13e67e06cf93512f18"
 dependencies = [
  "base16",
  "base64 0.13.1",
