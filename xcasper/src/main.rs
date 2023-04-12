@@ -20,6 +20,18 @@ enum Command {
     /// Generate network assets
     GenNetwork(GenerateNetworkAssets),
     /// Compile a rust project, optionally from an existing checkout, otherwise checkout the project and compile
+    ///
+    /// Example:
+    /// ```bash
+    /// cargo xcasper compile node /path/to/casper-node
+    /// ```
+    /// or
+    ///
+    /// Check out the client and compile it with debug=true and default options
+    /// ```
+    /// cargo xcasper compile -d client
+    /// ```
+    ///
     Compile(Compile),
     /// Stage an upgrade
     StageUpgrade,
@@ -69,8 +81,15 @@ impl FromStr for Project {
 
 #[derive(StructOpt, Debug)]
 struct Compile {
+    /// Short name of project to compile
     project: Project,
+
+    /// If specified, use this checkout instead of checking out the project
     existing_checkout: Option<PathBuf>,
+
+    /// Compile as debug (--release or not)
+    #[structopt(short, long)]
+    debug: bool,
 }
 
 impl Compile {
@@ -94,12 +113,14 @@ impl Compile {
         };
 
         let compile = match self.project {
-            Project::DbUtils => CompileRustProject::new(checkout, "casper-db-utils"),
-            Project::Client => CompileRustProject::new(checkout, "casper-client"),
-            Project::Node => CompileRustProject::new(checkout, "casper-node"),
-            Project::Launcher => CompileRustProject::new(checkout, "global-state-update-gen"),
+            Project::DbUtils => CompileRustProject::new(checkout, "casper-db-utils", self.debug),
+            Project::Client => CompileRustProject::new(checkout, "casper-client", self.debug),
+            Project::Node => CompileRustProject::new(checkout, "casper-node", self.debug),
+            Project::Launcher => {
+                CompileRustProject::new(checkout, "global-state-update-gen", self.debug)
+            }
             Project::GlobalStateUpdateGen => {
-                CompileRustProject::new(checkout, "casper-node-launcher")
+                CompileRustProject::new(checkout, "casper-node-launcher", self.debug)
             }
         };
 
@@ -112,7 +133,8 @@ fn main() -> anyhow::Result<()> {
 
     match args.command {
         Some(command) => {
-            command.dispatch()?;
+            let path = command.dispatch()?;
+            println!("command returned path {}", path.display());
         }
         _ => {
             println!("no command given")

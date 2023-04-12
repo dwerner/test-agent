@@ -7,6 +7,9 @@ edition = "2021"
 agent-lib = { path = "../../crates/agent-lib" }
 
 anyhow = { workspace = true }
+futures = { workspace = true }
 structopt = { workspace = true }
+serde = { workspace = true }
+serde_yaml = { workspace = true }
 tarpc = { workspace = true }
 tokio = { workspace = true }

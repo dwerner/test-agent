@@ -113,7 +113,7 @@ impl CheckoutGitRepo {
             println!("found checkout in {}", target_path.display());
         }
         let starting_dir = std::env::current_dir()?;
-        env::set_current_dir(&target_path)?;
+        env::set_current_dir(target_path)?;
         println!("updating repo - fetching remote: {}", self.remote);
         cmd!("git", "fetch", &self.remote).run()?;
         println!(
@@ -146,26 +146,11 @@ pub struct CompileRustProject {
 }
 
 impl CompileRustProject {
-    pub fn new(target_path: PathBuf, package_name: &str) -> Self {
+    pub fn new(target_path: PathBuf, package_name: &str, debug: bool) -> Self {
         Self {
-            debug: false,
+            debug,
             package_name: package_name.into(),
             target_path,
-        }
-    }
-
-    pub fn package(pkg: &str) -> impl FnOnce(Self) -> Self {
-        let pkg = pkg.to_owned();
-        move |proj| Self {
-            package_name: pkg,
-            ..proj
-        }
-    }
-
-    pub fn debug() -> impl FnOnce(Self) -> Self {
-        move |proj| Self {
-            debug: true,
-            ..proj
         }
     }
 

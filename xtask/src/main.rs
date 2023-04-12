@@ -9,8 +9,7 @@ use structopt::StructOpt;
 enum Command {
     FmtLint,
     BuildAll,
-    RunServerAndClient,
-    RunServer,
+    RunDaemon,
     GenerateSelfSignedCert {
         hostname: String,
     },
@@ -32,8 +31,7 @@ impl Command {
                 fmt_and_lint()?;
                 cargo_build_all()
             }
-            Command::RunServer => cargo_run_server(),
-            Command::RunServerAndClient => cargo_run_server_and_client(),
+            Command::RunDaemon => cargo_run_server(),
             Command::GenerateSelfSignedCert { hostname } => generate_cert_and_key_files(&hostname),
             Command::CleanDist => {
                 cmd!("rm", "-rf", "target/dist").run()?;
@@ -147,30 +145,20 @@ fn cargo_build_all() -> Result<(), std::io::Error> {
     Ok(())
 }
 
-fn cargo_run_server_and_client() -> Result<(), std::io::Error> {
-    println!("started server");
-    let daemon = cargo_run_and_read("daemon")?;
-
-    std::thread::sleep(Duration::from_millis(1000));
-
-    println!("started client");
-    let client = cargo_run_and_read("client")?;
-
-    client.join().expect("unable to join thread")?;
-    daemon.join().expect("unable to join thread")?;
-    Ok(())
-}
-
 fn cargo_run_server() -> Result<(), std::io::Error> {
-    let daemon = cargo_run_and_read("daemon")?;
+    let daemon = cargo_run_and_read("daemon", vec!["serve"])?;
     daemon.join().expect("unable to join thread")?;
     Ok(())
 }
 
 fn cargo_run_and_read(
     bin_name: &str,
+    bin_args: Vec<&str>,
 ) -> Result<JoinHandle<Result<(), std::io::Error>>, std::io::Error> {
-    let args = vec!["run", "--bin", bin_name, "--"];
+    let mut args = vec!["run", "--bin", bin_name, "--"];
+    for bin_arg in bin_args {
+        args.push(bin_arg);
+    }
     let args = args.iter().map(Into::<OsString>::into).collect::<Vec<_>>();
     let proc = duct::cmd("cargo", args).reader()?;
     Ok(std::thread::spawn(move || {

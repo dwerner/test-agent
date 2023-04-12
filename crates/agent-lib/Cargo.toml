@@ -9,7 +9,7 @@ edition = "2021"
 # casper-client = { path = "../../../casper-client-rs" }
 
 anyhow = { workspace = true }
-duct = { workspace = true }
+blake3 = { workspace = true }
 serde = { workspace = true }
 tarpc = { workspace = true }
 

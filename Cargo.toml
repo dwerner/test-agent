@@ -18,6 +18,8 @@ casper-types = { git = "http://github.com/casper-network/casper-node", branch = 
 casper-node = { git = "http://github.com/casper-network/casper-node", branch = "dev" }
 casper-client = { git = "http://github.com/casper-ecosystem/casper-client-rs", branch = "dev" }
 
+async-mutex = "1.4"
+blake3 = "1"
 const_format = "0.2"
 anyhow = "1"
 envsubst = "0.2"
@@ -29,7 +31,6 @@ rocksdb = "0.20.1"
 reqwest = "0.11"
 warp = "0.3"
 structopt = "0.3.26"
-structopt-yaml = "0.4"
 tarpc = { version = "0.31.0", features = ["full"]}
 thiserror = "1"
 tokio = { version = "1", features = ["macros", "net", "rt-multi-thread"] }
@@ -37,6 +38,7 @@ tokio-rustls = { version = "0.23" }
 tokio-util = { version = "0.7" }
 tokio-serde = { version = "0.8"}
 serde = { version = "1", features = ["derive"]}
+serde_yaml = "0.9.21"
 toml = "0.7"
 sudo = "0.6"
 rustls = { version = "0.20", features = ["dangerous_configuration"]}
