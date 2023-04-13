@@ -1,6 +1,6 @@
 use std::{
     fs::{self, File},
-    io::{BufReader, Read},
+    io::BufReader,
     net::SocketAddr,
     path::PathBuf,
     str::FromStr,
@@ -32,6 +32,8 @@ enum Rpc {
     StopService(StopServiceRequest),
     FetchFile(FetchFileRequest),
     PutFile(PutFile),
+
+    /// `cargo run --bin client -- -d bin/client/network.yaml put-file-chunked target/debug/daemon a/path/to/daemon
     PutFileChunked(PutFile),
 }
 

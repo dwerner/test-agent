@@ -9,4 +9,4 @@ temp
 # fetch dir for client
 fetch
 # xcasper build and asset directory
-xcasper-build
+xcasper-staging

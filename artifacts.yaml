@@ -1,0 +1,7 @@
+target_network_dir: "xcasper-staging/assets/casper/1_0_0"
+node:  "xcasper-staging/casper-node/target/debug:^casper-node$"
+client: "xcasper-staging/casper-client/target/release:^casper-client$"
+launcher: "xcasper-staging/casper-node-launcher/target/release:^casper-node-launcher$"
+db_utils: "xcasper-staging/casper-db-utils/target/release:^casper-db-utils$"
+contracts: "xcasper-staging/casper-node/target/wasm32-unknown-unknown/release:.*\\.wasm$"
+global_state_update_gen: "xcasper-staging/casper-node/target/release:^global-state-update-gen$"

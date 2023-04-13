@@ -4,11 +4,11 @@ members = [
     "bin/daemon",
     "crates/agent-lib",
     "xtask",
-    "xcasper", # container for nctl-related functionality
+    "xcasper", # container for nctl-like functionality
 ]
 
 exclude = [
-    "xcasper-build",
+    "xcasper-staging",
 ]
 
 [workspace.dependencies]
@@ -31,20 +31,22 @@ rocksdb = "0.20.1"
 reqwest = "0.11"
 warp = "0.3"
 structopt = "0.3.26"
-tarpc = { version = "0.31.0", features = ["full"]}
+tarpc = { version = "0.33", features = ["full"]}
 thiserror = "1"
 tokio = { version = "1", features = ["macros", "net", "rt-multi-thread"] }
-tokio-rustls = { version = "0.23" }
+tokio-rustls = { version = "0.24" }
 tokio-util = { version = "0.7" }
 tokio-serde = { version = "0.8"}
 serde = { version = "1", features = ["derive"]}
 serde_yaml = "0.9.21"
 toml = "0.7"
 sudo = "0.6"
-rustls = { version = "0.20", features = ["dangerous_configuration"]}
+regex = "1"
+rustls = { version = "0.21", features = ["dangerous_configuration"]}
 rustls-native-certs = "0.6"
 rustls-pemfile = "1"
 pin-project = "1"
+walkdir = "2"
 zstd = "0.12"
 
 

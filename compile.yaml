@@ -1,0 +1,20 @@
+node:
+  project: node
+  existing_checkout: null
+  debug: false 
+client:
+  project: client
+  existing_checkout: null
+  debug: false 
+launcher:
+  project: launcher
+  existing_checkout: null
+  debug: false 
+db_utils:
+  project: db_utils
+  existing_checkout: null
+  debug: false 
+global_state_update_gen:
+  project: global_state_update_gen
+  existing_checkout: null
+  debug: false 

@@ -34,7 +34,7 @@ use casper_types::{Motes, ProtocolVersion, PublicKey, SecretKey, U512};
 use const_format::concatcp;
 use structopt::StructOpt;
 
-use crate::common;
+use crate::{common, compile::BuildArtifacts};
 
 const DEFAULT_ASSETS_PATH: &str = concatcp!(common::BUILD_DIR, "/assets");
 const DEFAULT_CHAINSPEC_SRC_PATH: &str =
@@ -146,14 +146,14 @@ impl Default for Params {
     }
 }
 
-/// Generate assets for a given network.
+/// Generate assets for a given network. Generates the files within the assets directory.
 /// This includes:
 /// - accounts.toml
 /// - chainspec.toml
 /// - config.toml
 /// - validator keys
 /// - delegator keys
-pub fn generate_network_assets(
+pub fn generate_network_config_assets(
     GenerateNetworkAssets {
         network_name,
         assets_path,
@@ -162,7 +162,7 @@ pub fn generate_network_assets(
         overwrite,
         version,
     }: GenerateNetworkAssets,
-) -> Result<PathBuf, anyhow::Error> {
+) -> Result<BuildArtifacts, anyhow::Error> {
     println!(
         "Generating network assets for network '{}' version '{}'...",
         network_name, version,
@@ -186,19 +186,32 @@ pub fn generate_network_assets(
     fs::create_dir_all(&network_dir)?;
 
     // shared directory containing files that are shared between nodes
-    fs::create_dir_all(network_dir.join("shared"))?;
+    let network_shared_dir = network_dir.join("shared");
+    fs::create_dir_all(&network_shared_dir)?;
 
-    create_accounts_toml_from_params(source, &network_dir)?;
-    create_chainspec_from_src(&chainspec_src_path, &network_name, &network_dir, version)?;
-    create_config_from_defaults(&network_dir)?;
+    create_accounts_toml_from_params(source, &network_shared_dir)?;
+    create_chainspec_from_src(
+        &chainspec_src_path,
+        &network_name,
+        &network_shared_dir,
+        version,
+    )?;
+    create_config_from_defaults(&network_shared_dir)?;
 
-    Ok(network_dir)
+    Ok(BuildArtifacts {
+        path: network_shared_dir,
+        files: vec![
+            "accounts.toml".to_string(),
+            "chainspec.toml".to_string(),
+            "config.toml".to_string(),
+        ],
+    })
 }
 
 /// Create accounts.toml from the given parameters
 fn create_accounts_toml_from_params(
     source: Params,
-    network_dir: &Path,
+    network_shared_dir: &Path,
 ) -> Result<(), anyhow::Error> {
     if let Params::Generate {
         validator_count,
@@ -216,7 +229,7 @@ fn create_accounts_toml_from_params(
         for v in 0..validator_count {
             let validator = create_validator_account(
                 v,
-                network_dir,
+                network_shared_dir,
                 validator_balance,
                 validator_bonded_amount,
             )?;
@@ -230,7 +243,7 @@ fn create_accounts_toml_from_params(
                 .expect("None from an infinite loop?");
             let delegator = create_delegator_account(
                 d as u32,
-                network_dir,
+                network_shared_dir,
                 validator.public_key.clone(),
                 delegator_balance,
                 delegated_amount,
@@ -241,9 +254,7 @@ fn create_accounts_toml_from_params(
 
         // Write accounts.toml
         let accounts = toml::to_string_pretty(&accounts_config)?;
-        let mut writer = BufWriter::new(File::create(
-            network_dir.join("shared").join(ACCOUNTS_TOML),
-        )?);
+        let mut writer = BufWriter::new(File::create(network_shared_dir.join(ACCOUNTS_TOML))?);
         writer.write_all(accounts.as_bytes())?;
         writer.flush()?;
     } else {
@@ -252,12 +263,12 @@ fn create_accounts_toml_from_params(
     Ok(())
 }
 
-fn create_config_from_defaults(network_dir: &Path) -> Result<(), anyhow::Error> {
+fn create_config_from_defaults(network_shared_dir: &Path) -> Result<(), anyhow::Error> {
     let mut config = MainReactorConfig::default();
     let path = Path::new(SECRET_KEY_PEM);
     config.consensus.secret_key_path = External::Path(path.to_path_buf());
     let config = toml::to_string_pretty(&config)?;
-    let mut writer = BufWriter::new(File::create(network_dir.join("shared").join(CONFIG_TOML))?);
+    let mut writer = BufWriter::new(File::create(network_shared_dir.join(CONFIG_TOML))?);
     writer.write_all(config.as_bytes())?;
     writer.flush()?;
     Ok(())
@@ -266,7 +277,7 @@ fn create_config_from_defaults(network_dir: &Path) -> Result<(), anyhow::Error> 
 fn create_chainspec_from_src(
     chainspec_src_path: &Path,
     network_name: &str,
-    target_dir: &Path,
+    network_shared_dir: &Path,
     version: Version,
 ) -> Result<(), anyhow::Error> {
     use casper_node::utils::Loadable;
@@ -293,9 +304,7 @@ fn create_chainspec_from_src(
     }
 
     let chainspec = toml::to_string_pretty(&chainspec)?;
-    let mut writer = BufWriter::new(File::create(
-        target_dir.join("shared").join(CHAINSPEC_TOML),
-    )?);
+    let mut writer = BufWriter::new(File::create(network_shared_dir.join(CHAINSPEC_TOML))?);
     writer.write_all(chainspec.as_bytes())?;
     writer.flush()?;
     Ok(())

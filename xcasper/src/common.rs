@@ -1,1 +1,1 @@
-pub const BUILD_DIR: &str = "xcasper-build";
+pub const BUILD_DIR: &str = "xcasper-staging";
