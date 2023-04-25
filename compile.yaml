@@ -5,7 +5,7 @@ node:
 client:
   project: client
   existing_checkout: null
-  debug: false 
+  debug: false
 launcher:
   project: launcher
   existing_checkout: null

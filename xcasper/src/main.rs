@@ -23,18 +23,6 @@ struct Args {
 
 #[derive(StructOpt, Debug)]
 enum Command {
-    /// Compile all projects
-    CompileAllProjects {
-        #[structopt(short, long)]
-        config: Option<PathBuf>,
-    },
-    /// Generate network assets, config only
-    /// Will generate the assets folder and the config files
-    GenNetworkConfig(GenerateNetworkAssets),
-
-    /// Copy artifacts to network directory, can be optionally specified with an artifacts.yaml file
-    CopyArtifactsToNetworkDir(CopyArtifactsToNetworkDir),
-
     /// Compile a single rust project, optionally from an existing checkout, otherwise checkout the project and compile
     ///
     /// Example:
@@ -44,11 +32,25 @@ enum Command {
     /// or
     ///
     /// Check out the client and compile it with debug=true and default options
-    /// ```
+    /// ```bash
     /// cargo xcasper compile -d client
     /// ```
     ///
     Compile(Compile),
+
+    /// Compile all projects
+    CompileAllProjects {
+        #[structopt(short, long)]
+        config: Option<PathBuf>,
+    },
+
+    /// Copy artifacts to network directory, can be optionally specified with an artifacts.yaml file
+    CopyArtifactsToNetworkDir(CopyArtifactsToNetworkDir),
+
+    /// Generate network assets, config only
+    /// Will generate the assets folder and the config files
+    GenNetworkConfig(GenerateNetworkAssets),
+
     /// Stage an upgrade
     StageUpgrade,
 }

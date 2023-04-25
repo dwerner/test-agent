@@ -52,7 +52,7 @@ impl CheckoutGitRepo {
     pub(crate) fn db_utils_defaults() -> Self {
         Self {
             git_url: CASPER_DB_UTILS_REPO.into(),
-            branch: "master".into(),
+            branch: "dev".into(),
             remote: DEFAULT_REMOTE.into(),
             base_path: BUILD_DIR.into(),
             local_checkout_name: "casper-db-utils".into(),
