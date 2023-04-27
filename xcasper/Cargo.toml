@@ -9,7 +9,6 @@ casper-node = { workspace = true }
 casper-types = { workspace = true }
 const_format = { workspace = true }
 duct = { workspace = true }
-envsubst = { workspace = true }
 regex = { workspace = true }
 serde = { workspace = true }
 serde_yaml = { workspace = true }

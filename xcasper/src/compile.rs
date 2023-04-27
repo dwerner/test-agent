@@ -253,20 +253,20 @@ fn find_files_with_suffix_at_path(path: PathBuf, suffix: String) -> Vec<String> 
         .into_iter()
         .filter_map(|e| e.ok())
     {
-        if entry.path().is_file() {
-            if entry.path().to_string_lossy().ends_with(&suffix) {
-                let file_stem = entry.path().file_stem().unwrap().to_string_lossy();
-                let extension = entry.path().extension().unwrap().to_string_lossy();
-                files.push(format!("{}.{}", file_stem, extension));
-            }
+        if entry.path().is_file() && entry.path().to_string_lossy().ends_with(&suffix) {
+            let file_stem = entry.path().file_stem().unwrap().to_string_lossy();
+            let extension = entry.path().extension().unwrap().to_string_lossy();
+            files.push(format!("{}.{}", file_stem, extension));
         }
     }
     files
 }
 
+// Supports building a project with either cargo or make
 impl BuildProject {
     pub fn dispatch(self) -> Result<BuildArtifacts, anyhow::Error> {
         match self {
+            BuildProject::Cargo(cargo_build_rust_project) => cargo_build_rust_project.dispatch(),
             BuildProject::Make {
                 makefile_root,
                 target,
@@ -283,7 +283,6 @@ impl BuildProject {
                     files: find_files_with_suffix_at_path(build_dir, artifact_suffix),
                 })
             }
-            BuildProject::Cargo(cargo_build_rust_project) => cargo_build_rust_project.dispatch(),
         }
     }
 }

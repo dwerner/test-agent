@@ -11,9 +11,8 @@ agent-lib = { path = "../../crates/agent-lib" }
 
 async-mutex = { workspace = true }
 anyhow ={ workspace = true } 
-serde = { workspace = true }
 structopt = { workspace = true }
-sudo = { workspace = true }
+# sudo = { workspace = true }
 tarpc = { workspace = true }
 tokio = { workspace = true }
 thiserror = { workspace = true }

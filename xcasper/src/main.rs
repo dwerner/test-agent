@@ -22,8 +22,9 @@ struct Args {
 }
 
 #[derive(StructOpt, Debug)]
+#[structopt(about = "xcasper - Casper Network build tool")]
 enum Command {
-    /// Compile a single rust project, optionally from an existing checkout, otherwise checkout the project and compile
+    /// Compile a single rust project, optionally from an existing checkout, otherwise checkout the project and compile it
     ///
     /// Example:
     /// ```bash
@@ -44,12 +45,11 @@ enum Command {
         config: Option<PathBuf>,
     },
 
-    /// Copy artifacts to network directory, can be optionally specified with an artifacts.yaml file
-    CopyArtifactsToNetworkDir(CopyArtifactsToNetworkDir),
-
-    /// Generate network assets, config only
-    /// Will generate the assets folder and the config files
+    /// Generate network dir and config files.
     GenNetworkConfig(GenerateNetworkAssets),
+
+    /// Copy artifacts to network dir, can be optionally specified with an artifacts.yaml file
+    CopyArtifactsToNetworkDir(CopyArtifactsToNetworkDir),
 
     /// Stage an upgrade
     StageUpgrade,

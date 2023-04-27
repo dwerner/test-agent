@@ -109,12 +109,7 @@ impl AgentService for Agent {
                     target_perms,
                     chunks: Vec::new(),
                 });
-                if transfer
-                    .chunks
-                    .iter()
-                    .find(|c| c.chunk_id == chunk_id)
-                    .is_some()
-                {
+                if transfer.chunks.iter().any(|c| c.chunk_id == chunk_id) {
                     println!("already have chunk with id {chunk_id}");
                     return PutFileChunkResponse::Duplicate { chunk_id };
                 }

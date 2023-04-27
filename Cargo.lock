@@ -783,9 +783,7 @@ dependencies = [
  "anyhow",
  "async-mutex",
  "futures",
- "serde",
  "structopt",
- "sudo",
  "tarpc",
  "thiserror",
  "tokio",
@@ -1007,15 +1005,6 @@ dependencies = [
  "quote 1.0.23",
  "rustc_version",
  "syn 1.0.109",
-]
-
-[[package]]
-name = "envsubst"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf2f29f6ee674d1229e5715dfc7e24f14395a20d66949e36032de68b31542643"
-dependencies = [
- "thiserror",
 ]
 
 [[package]]
@@ -2909,16 +2898,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6bdef32e8150c2a081110b42772ffe7d7c9032b606bc226c8260fd97e0976601"
 
 [[package]]
-name = "sudo"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "88bd84d4c082e18e37fef52c0088e4407dabcef19d23a607fb4b5ee03b7d5b83"
-dependencies = [
- "libc",
- "log",
-]
-
-[[package]]
 name = "syn"
 version = "0.15.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3944,7 +3923,6 @@ dependencies = [
  "casper-types",
  "const_format",
  "duct",
- "envsubst",
  "regex",
  "serde",
  "serde_yaml",

@@ -1,24 +1,25 @@
-use std::{
-    ffi::OsString, io::BufRead, net::TcpListener, path::PathBuf, thread::JoinHandle, time::Duration,
-};
+use std::{ffi::OsString, io::BufRead, net::TcpListener, path::PathBuf, thread::JoinHandle};
 
 use duct::cmd;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
 enum Command {
+    /// Format and lint the code in this project.
     FmtLint,
+    /// Build all binaries in this project (client and server).
     BuildAll,
+    /// Run just the daemon, useful for testing.
     RunDaemon,
-    GenerateSelfSignedCert {
-        hostname: String,
-    },
-    /// Create a dist tarball of the agent, with a given version number provided (manual)
+    /// Generate a self-signed certificate and key for the agent.
+    GenerateSelfSignedCert { hostname: String },
+    /// Create a dist tarball of the agent, with a given version number provided (manual).
     Dist {
         version: u32,
         #[structopt(short, long)]
         regenerate_key_and_certificate: bool,
     },
+    /// Clean the dist directory.
     CleanDist,
 }
 
@@ -45,6 +46,7 @@ impl Command {
     }
 }
 
+/// Create a tarball of the agent, with a given version number provided (manual)
 fn create_dist_tarball(
     version: u32,
     regenerate_key_and_certificate: bool,
