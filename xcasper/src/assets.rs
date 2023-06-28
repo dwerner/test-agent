@@ -6,15 +6,10 @@ use std::{
     str::FromStr,
 };
 
-use casper_node::{
-    types::{
-        chainspec::{
-            AccountConfig, AccountsConfig, ChainspecRawBytes, DelegatorConfig, ValidatorConfig,
-        },
-        Chainspec,
-    },
-    utils::External,
-    MainReactorConfig,
+use casper_node::{utils::External, MainReactorConfig};
+
+use casper_types::{
+    AccountConfig, AccountsConfig, Chainspec, ChainspecRawBytes, DelegatorConfig, ValidatorConfig,
 };
 
 const ACCOUNTS_TOML: &str = "accounts.toml";

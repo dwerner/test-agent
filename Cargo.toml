@@ -57,5 +57,5 @@ zstd = "0.12"
 # casper-node = { path = "../casper-node/node" }
 
 [patch."http://github.com/casper-network/casper-node"]
-casper-types = { git = "https://github.com/dwerner/casper-node", branch = "pub-config-fields-2" }
-casper-node = { git = "https://github.com/dwerner/casper-node", branch = "pub-config-fields-2" }
+casper-types = { git = "https://github.com/casper-network/casper-node", branch = "feat-2.0" }
+casper-node = { git = "https://github.com/casper-network/casper-node", branch = "feat-2.0" }
