@@ -321,7 +321,7 @@ checksum = "89b2fd2a0dcf38d7971e2194b6b6eebab45ae01067456a7fd93d5547a61b70be"
 [[package]]
 name = "casper-execution-engine"
 version = "5.0.0"
-source = "git+https://github.com/Fraser999/casper-node?branch=153-move-ee-types#c368eee14bc77c524fe7f2a99dde074c1e0e82f6"
+source = "git+http://github.com/casper-network/casper-node?branch=feat-2.0#415bcbc2ff9a16d6898b6aab4a999d25462bcbe1"
 dependencies = [
  "anyhow",
  "base16",
@@ -335,6 +335,7 @@ dependencies = [
  "hostname",
  "humantime",
  "itertools 0.10.5",
+ "libc",
  "linked-hash-map",
  "log",
  "num",
@@ -361,7 +362,7 @@ dependencies = [
 [[package]]
 name = "casper-json-rpc"
 version = "1.0.0"
-source = "git+https://github.com/Fraser999/casper-node?branch=153-move-ee-types#c368eee14bc77c524fe7f2a99dde074c1e0e82f6"
+source = "git+http://github.com/casper-network/casper-node?branch=feat-2.0#415bcbc2ff9a16d6898b6aab4a999d25462bcbe1"
 dependencies = [
  "bytes",
  "futures",
@@ -376,7 +377,7 @@ dependencies = [
 [[package]]
 name = "casper-node"
 version = "1.5.0-rc.1"
-source = "git+https://github.com/Fraser999/casper-node?branch=153-move-ee-types#c368eee14bc77c524fe7f2a99dde074c1e0e82f6"
+source = "git+http://github.com/casper-network/casper-node?branch=feat-2.0#415bcbc2ff9a16d6898b6aab4a999d25462bcbe1"
 dependencies = [
  "ansi_term",
  "anyhow",
@@ -462,7 +463,7 @@ dependencies = [
 [[package]]
 name = "casper-storage"
 version = "1.4.3"
-source = "git+https://github.com/Fraser999/casper-node?branch=153-move-ee-types#c368eee14bc77c524fe7f2a99dde074c1e0e82f6"
+source = "git+http://github.com/casper-network/casper-node?branch=feat-2.0#415bcbc2ff9a16d6898b6aab4a999d25462bcbe1"
 dependencies = [
  "bincode",
  "casper-types",
@@ -482,7 +483,7 @@ dependencies = [
 [[package]]
 name = "casper-types"
 version = "3.0.0"
-source = "git+https://github.com/Fraser999/casper-node?branch=153-move-ee-types#c368eee14bc77c524fe7f2a99dde074c1e0e82f6"
+source = "git+http://github.com/casper-network/casper-node?branch=feat-2.0#415bcbc2ff9a16d6898b6aab4a999d25462bcbe1"
 dependencies = [
  "base16",
  "base64 0.13.1",
@@ -497,7 +498,6 @@ dependencies = [
  "humantime",
  "itertools 0.10.5",
  "k256",
- "libc",
  "num",
  "num-derive",
  "num-integer",

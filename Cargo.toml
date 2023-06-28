@@ -14,8 +14,8 @@ exclude = [
 [workspace.dependencies]
 agent-lib = { path = "../../crates/agent-lib" }
 
-casper-types = { git = "http://github.com/casper-network/casper-node", branch = "dev" }
-casper-node = { git = "http://github.com/casper-network/casper-node", branch = "dev" }
+casper-types = { git = "http://github.com/casper-network/casper-node", branch = "feat-2.0" }
+casper-node = { git = "http://github.com/casper-network/casper-node", branch = "feat-2.0" }
 casper-client = { git = "http://github.com/casper-ecosystem/casper-client-rs", branch = "dev" }
 
 async-mutex = "1.4"
@@ -27,7 +27,6 @@ async-process = "1.5.0"
 duct = "0.13"
 futures = "0.3"
 libc = "0.2"
-rocksdb = "0.20.1"
 reqwest = "0.11"
 warp = "0.3"
 structopt = "0.3.26"
@@ -56,6 +55,6 @@ zstd = "0.12"
 # casper-types = { path = "../casper-node/types" }
 # casper-node = { path = "../casper-node/node" }
 
-[patch."http://github.com/casper-network/casper-node"]
-casper-types = { git = "https://github.com/casper-network/casper-node", branch = "feat-2.0" }
-casper-node = { git = "https://github.com/casper-network/casper-node", branch = "feat-2.0" }
+# [patch."http://github.com/casper-network/casper-node"]
+# casper-types = { git = "https://github.com/casper-network/casper-node", branch = "feat-2.0" }
+# casper-node = { git = "https://github.com/casper-network/casper-node", branch = "feat-2.0" }
